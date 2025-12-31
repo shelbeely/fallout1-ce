@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 
 #include "game/actions.h"
 #include "game/combat.h"
@@ -11,7 +12,9 @@
 #include "game/item.h"
 #include "game/map.h"
 #include "game/object.h"
+#include "game/perk.h"
 #include "game/protinst.h"
+#include "game/skill.h"
 #include "game/stat.h"
 #include "game/tile.h"
 
@@ -21,6 +24,25 @@ namespace fallout {
 static bool gAiControlApiEnabled = false;
 static const char* kActionFilePath = "ai_action.json";
 static const char* kStateFilePath = "ai_state.json";
+static const char* kEventsFilePath = "ai_events.json";
+
+// Event tracking
+#define MAX_RECENT_EVENTS 50
+static char gRecentEvents[MAX_RECENT_EVENTS][256];
+static int gEventCount = 0;
+static int gEventWriteIndex = 0;
+
+// Action tracking
+static char gLastActionResult[256] = "none";
+static int gLastActionTimestamp = 0;
+static int gActionCooldownMs = 100; // 100ms cooldown between actions
+
+// Stats tracking for Twitch overlays
+static int gTotalDamageDealt = 0;
+static int gTotalKills = 0;
+static int gSessionStartTime = 0;
+static int gLastHitPoints = 0;
+static int gLastLevel = 0;
 
 // Simple JSON writer helpers
 class JsonWriter {
@@ -76,6 +98,14 @@ public:
         first_item = false;
     }
     
+    void addFloat(const char* name, float value) {
+        if (!first_item) append(",");
+        char temp[64];
+        snprintf(temp, sizeof(temp), "\"%s\":%.2f", name, value);
+        append(temp);
+        first_item = false;
+    }
+    
     void addObjectInArray() {
         if (!first_item) append(",");
         append("{");
@@ -105,11 +135,51 @@ private:
     }
 };
 
+// Helper to add an event to the log
+static void addEvent(const char* eventType, const char* description) {
+    if (gEventCount >= MAX_RECENT_EVENTS * 10) {
+        // Reset if we've wrapped too many times
+        gEventCount = 0;
+        gEventWriteIndex = 0;
+    }
+    
+    snprintf(gRecentEvents[gEventWriteIndex], sizeof(gRecentEvents[gEventWriteIndex]),
+             "%s: %s", eventType, description);
+    
+    gEventWriteIndex = (gEventWriteIndex + 1) % MAX_RECENT_EVENTS;
+    gEventCount++;
+}
+
+// Get current timestamp in milliseconds
+static int getCurrentTimeMs() {
+    return (int)(time(NULL) * 1000);
+}
+
 // Write current game state to JSON file
 static void writeGameState() {
     if (!obj_dude) {
         return;
     }
+    
+    // Track events
+    int currentHP = critter_get_hits(obj_dude);
+    int currentLevel = stat_pc_get(PC_STAT_LEVEL);
+    
+    if (gLastHitPoints > 0 && currentHP < gLastHitPoints) {
+        int damage = gLastHitPoints - currentHP;
+        char eventDesc[128];
+        snprintf(eventDesc, sizeof(eventDesc), "Took %d damage (HP: %d->%d)", damage, gLastHitPoints, currentHP);
+        addEvent("damage_taken", eventDesc);
+    }
+    
+    if (currentLevel > gLastLevel && gLastLevel > 0) {
+        char eventDesc[128];
+        snprintf(eventDesc, sizeof(eventDesc), "Level up! Now level %d", currentLevel);
+        addEvent("level_up", eventDesc);
+    }
+    
+    gLastHitPoints = currentHP;
+    gLastLevel = currentLevel;
     
     JsonWriter json;
     json.startObject();
@@ -120,16 +190,21 @@ static void writeGameState() {
     json.addInt("player_rotation", obj_dude->rotation);
     
     // Player stats
-    json.addInt("hit_points", critter_get_hits(obj_dude));
+    json.addInt("hit_points", currentHP);
     json.addInt("max_hit_points", stat_level(obj_dude, STAT_MAXIMUM_HIT_POINTS));
     json.addInt("action_points", obj_dude->data.critter.combat.ap);
-    json.addInt("level", stat_pc_get(PC_STAT_LEVEL));
+    json.addInt("max_action_points", stat_level(obj_dude, STAT_MAXIMUM_ACTION_POINTS));
+    json.addInt("level", currentLevel);
     json.addInt("experience", stat_pc_get(PC_STAT_EXPERIENCE));
+    json.addInt("armor_class", stat_level(obj_dude, STAT_ARMOR_CLASS));
+    json.addInt("sequence", stat_level(obj_dude, STAT_SEQUENCE));
+    json.addInt("carry_weight", stat_level(obj_dude, STAT_CARRY_WEIGHT));
+    json.addInt("melee_damage", stat_level(obj_dude, STAT_MELEE_DAMAGE));
     
     // Combat state
     json.addBool("in_combat", isInCombat());
     
-    // Primary stats
+    // Primary stats (SPECIAL)
     json.addInt("strength", stat_level(obj_dude, STAT_STRENGTH));
     json.addInt("perception", stat_level(obj_dude, STAT_PERCEPTION));
     json.addInt("endurance", stat_level(obj_dude, STAT_ENDURANCE));
@@ -137,6 +212,33 @@ static void writeGameState() {
     json.addInt("intelligence", stat_level(obj_dude, STAT_INTELLIGENCE));
     json.addInt("agility", stat_level(obj_dude, STAT_AGILITY));
     json.addInt("luck", stat_level(obj_dude, STAT_LUCK));
+    
+    // Skills
+    json.startArray("skills");
+    const char* skillNames[] = {
+        "Small Guns", "Big Guns", "Energy Weapons", "Unarmed", "Melee Weapons",
+        "Throwing", "First Aid", "Doctor", "Sneak", "Lockpick", "Steal",
+        "Traps", "Science", "Repair", "Speech", "Barter", "Gambling", "Outdoorsman"
+    };
+    for (int i = 0; i < SKILL_COUNT; i++) {
+        json.addObjectInArray();
+        json.addString("name", skillNames[i]);
+        json.addInt("value", skill_level(obj_dude, i));
+        json.endObjectInArray();
+    }
+    json.endArray();
+    
+    // Perks (up to 20)
+    json.startArray("perks");
+    int perks[128]; // Max perks
+    int perkCount = perk_make_list(perks);
+    for (int i = 0; i < perkCount && i < 20; i++) {
+        json.addObjectInArray();
+        json.addString("name", perk_name(perks[i]));
+        json.addInt("level", perk_level(perks[i]));
+        json.endObjectInArray();
+    }
+    json.endArray();
     
     // Map info
     int mapIndex = map_get_index_number();
@@ -202,6 +304,33 @@ static void writeGameState() {
             
             json.endObjectInArray();
             invCount++;
+        }
+    }
+    json.endArray();
+    
+    // Streaming stats
+    json.addInt("total_damage_dealt", gTotalDamageDealt);
+    json.addInt("total_kills", gTotalKills);
+    
+    int elapsedTime = 0;
+    if (gSessionStartTime > 0) {
+        elapsedTime = (getCurrentTimeMs() - gSessionStartTime) / 1000; // seconds
+    }
+    json.addInt("session_time_seconds", elapsedTime);
+    
+    // Action feedback
+    json.addString("last_action_result", gLastActionResult);
+    
+    // Recent events (last 10)
+    json.startArray("recent_events");
+    int eventsToShow = gEventCount < MAX_RECENT_EVENTS ? gEventCount : MAX_RECENT_EVENTS;
+    int startIdx = gEventCount < MAX_RECENT_EVENTS ? 0 : gEventWriteIndex;
+    for (int i = 0; i < eventsToShow; i++) {
+        int idx = (startIdx + i) % MAX_RECENT_EVENTS;
+        if (gRecentEvents[idx][0] != '\0') {
+            json.addObjectInArray();
+            json.addString("event", gRecentEvents[idx]);
+            json.endObjectInArray();
         }
     }
     json.endArray();
@@ -286,25 +415,48 @@ static bool readAction(char* actionType, int* targetTile, int* targetPid) {
 // Execute the action parsed from JSON
 static bool executeAction(const char* actionType, int targetTile, int targetPid) {
     if (!obj_dude || !actionType) {
+        snprintf(gLastActionResult, sizeof(gLastActionResult), "error: invalid action");
         return false;
     }
+    
+    // Check cooldown
+    int currentTime = getCurrentTimeMs();
+    if (currentTime - gLastActionTimestamp < gActionCooldownMs) {
+        snprintf(gLastActionResult, sizeof(gLastActionResult), "error: cooldown active");
+        return false;
+    }
+    
+    gLastActionTimestamp = currentTime;
     
     // Move to tile
     if (strcmp(actionType, "move") == 0) {
         if (targetTile >= 0 && targetTile < 40000) {
-            // Use pathfinding to move
             if (!isInCombat()) {
-                // In non-combat mode, directly move
-                obj_attempt_placement(obj_dude, targetTile, obj_dude->elevation, 0);
+                int result = obj_attempt_placement(obj_dude, targetTile, obj_dude->elevation, 0);
+                if (result == 0) {
+                    snprintf(gLastActionResult, sizeof(gLastActionResult), "success: moved to tile %d", targetTile);
+                    addEvent("move", "Player moved");
+                } else {
+                    snprintf(gLastActionResult, sizeof(gLastActionResult), "error: cannot move to tile %d", targetTile);
+                }
             } else {
-                // In combat, use action points
                 int distance = tile_dist(obj_dude->tile, targetTile);
                 int apCost = item_mp_cost(obj_dude, HIT_MODE_PUNCH, false);
                 if (obj_dude->data.critter.combat.ap >= apCost) {
-                    obj_attempt_placement(obj_dude, targetTile, obj_dude->elevation, 0);
-                    obj_dude->data.critter.combat.ap -= apCost;
+                    int result = obj_attempt_placement(obj_dude, targetTile, obj_dude->elevation, 0);
+                    if (result == 0) {
+                        obj_dude->data.critter.combat.ap -= apCost;
+                        snprintf(gLastActionResult, sizeof(gLastActionResult), "success: moved to tile %d (-%d AP)", targetTile, apCost);
+                        addEvent("move", "Player moved in combat");
+                    } else {
+                        snprintf(gLastActionResult, sizeof(gLastActionResult), "error: cannot move to tile %d", targetTile);
+                    }
+                } else {
+                    snprintf(gLastActionResult, sizeof(gLastActionResult), "error: not enough AP");
                 }
             }
+        } else {
+            snprintf(gLastActionResult, sizeof(gLastActionResult), "error: invalid tile %d", targetTile);
         }
         return true;
     }
@@ -313,22 +465,29 @@ static bool executeAction(const char* actionType, int targetTile, int targetPid)
     if (strcmp(actionType, "wait") == 0) {
         if (isInCombat()) {
             combat_turn_run();
+            snprintf(gLastActionResult, sizeof(gLastActionResult), "success: turn ended");
+            addEvent("wait", "Turn skipped");
+        } else {
+            snprintf(gLastActionResult, sizeof(gLastActionResult), "success: waited");
         }
         return true;
     }
     
     // Use item
     if (strcmp(actionType, "use_item") == 0) {
-        // Find item in inventory by PID
         Inventory* inventory = &(obj_dude->data.critter.inventory);
         for (int i = 0; i < inventory->length; i++) {
             InventoryItem* invItem = &(inventory->items[i]);
             if (invItem->item && invItem->item->pid == targetPid) {
-                // Use the item
                 obj_use_item(obj_dude, invItem->item);
+                char* itemName = object_name(invItem->item);
+                snprintf(gLastActionResult, sizeof(gLastActionResult), "success: used %s", itemName ? itemName : "item");
+                addEvent("use_item", gLastActionResult + 9); // Skip "success: "
                 return true;
             }
         }
+        snprintf(gLastActionResult, sizeof(gLastActionResult), "error: item %d not found in inventory", targetPid);
+        return true;
     }
     
     // Pickup item
@@ -337,12 +496,21 @@ static bool executeAction(const char* actionType, int targetTile, int targetPid)
         while (obj != NULL) {
             if (obj->tile == targetTile && obj->pid == targetPid) {
                 if (FID_TYPE(obj->fid) == OBJ_TYPE_ITEM) {
-                    obj_pickup(obj_dude, obj);
+                    char* itemName = object_name(obj);
+                    int result = obj_pickup(obj_dude, obj);
+                    if (result == 0) {
+                        snprintf(gLastActionResult, sizeof(gLastActionResult), "success: picked up %s", itemName ? itemName : "item");
+                        addEvent("pickup", gLastActionResult + 9);
+                    } else {
+                        snprintf(gLastActionResult, sizeof(gLastActionResult), "error: cannot pickup item");
+                    }
                     return true;
                 }
             }
             obj = obj_find_next_at();
         }
+        snprintf(gLastActionResult, sizeof(gLastActionResult), "error: item not found at tile %d", targetTile);
+        return true;
     }
     
     // Attack target
@@ -358,11 +526,22 @@ static bool executeAction(const char* actionType, int targetTile, int targetPid)
         }
         
         if (target) {
+            char* targetName = object_name(target);
             combat_attack(obj_dude, target, HIT_MODE_LEFT_WEAPON_PRIMARY, HIT_LOCATION_TORSO);
+            snprintf(gLastActionResult, sizeof(gLastActionResult), "success: attacked %s", targetName ? targetName : "target");
+            addEvent("attack", gLastActionResult + 9);
+            gTotalDamageDealt++; // Simplified tracking
+            if (critter_is_dead(target)) {
+                gTotalKills++;
+            }
             return true;
+        } else {
+            snprintf(gLastActionResult, sizeof(gLastActionResult), "error: no target at tile %d", targetTile);
         }
+        return true;
     }
     
+    snprintf(gLastActionResult, sizeof(gLastActionResult), "error: unknown action '%s'", actionType);
     return false;
 }
 
@@ -372,15 +551,39 @@ void ai_control_api_init() {
     if (config_get_value(&game_config, GAME_CONFIG_PREFERENCES_KEY, "ai_control_api", &value)) {
         gAiControlApiEnabled = (value != 0);
     }
+    
+    if (gAiControlApiEnabled) {
+        // Initialize tracking
+        gSessionStartTime = getCurrentTimeMs();
+        gLastHitPoints = 0;
+        gLastLevel = 0;
+        gTotalDamageDealt = 0;
+        gTotalKills = 0;
+        gEventCount = 0;
+        gEventWriteIndex = 0;
+        snprintf(gLastActionResult, sizeof(gLastActionResult), "none");
+        
+        // Clear events
+        for (int i = 0; i < MAX_RECENT_EVENTS; i++) {
+            gRecentEvents[i][0] = '\0';
+        }
+        
+        addEvent("system", "AI Control API initialized");
+    }
 }
 
 // Cleanup AI control API
 void ai_control_api_exit() {
+    if (gAiControlApiEnabled) {
+        addEvent("system", "AI Control API shutting down");
+    }
+    
     gAiControlApiEnabled = false;
     
     // Clean up any remaining files
     remove(kActionFilePath);
     remove(kStateFilePath);
+    remove(kEventsFilePath);
 }
 
 // Check if API is enabled
