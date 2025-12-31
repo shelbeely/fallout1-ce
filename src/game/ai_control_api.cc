@@ -25,6 +25,7 @@ static bool gAiControlApiEnabled = false;
 static const char* kActionFilePath = "ai_action.json";
 static const char* kStateFilePath = "ai_state.json";
 static const char* kEventsFilePath = "ai_events.json";
+static const char* kKnowledgeFilePath = "ai_knowledge.json";
 
 // Event tracking
 #define MAX_RECENT_EVENTS 50
@@ -43,6 +44,9 @@ static int gTotalKills = 0;
 static int gSessionStartTime = 0;
 static int gLastHitPoints = 0;
 static int gLastLevel = 0;
+
+// Knowledge base written once at initialization
+static bool gKnowledgeWritten = false;
 
 // Simple JSON writer helpers
 class JsonWriter {
@@ -153,6 +157,637 @@ static void addEvent(const char* eventType, const char* description) {
 // Get current timestamp in milliseconds
 static int getCurrentTimeMs() {
     return (int)(time(NULL) * 1000);
+}
+
+// Write game knowledge base (written once at initialization)
+static void writeGameKnowledge() {
+    if (gKnowledgeWritten) {
+        return;
+    }
+    
+    JsonWriter json;
+    json.startObject();
+    
+    // Game overview
+    json.addString("game_title", "Fallout 1");
+    json.addString("genre", "Post-apocalyptic RPG");
+    json.addString("setting", "Post-nuclear war wasteland, year 2161");
+    
+    // Core gameplay loop
+    json.startArray("core_objectives");
+    json.addObjectInArray();
+    json.addString("objective", "Find water chip for Vault 13");
+    json.addString("time_limit", "150 days initially");
+    json.endObjectInArray();
+    json.addObjectInArray();
+    json.addString("objective", "Defeat the Master and stop mutant army");
+    json.endObjectInArray();
+    json.endArray();
+    
+    // Available actions
+    json.startArray("available_actions");
+    const char* actions[][2] = {
+        {"move", "Move player to target tile. Use for exploration and positioning. Costs AP in combat."},
+        {"attack", "Attack a target at specified tile. Requires weapon and line of sight. Costs AP."},
+        {"use_item", "Use an item from inventory by PID. Includes Stimpaks for healing, tools, consumables."},
+        {"pickup", "Pick up item at target tile. Used to collect loot, ammunition, and quest items."},
+        {"wait", "Skip turn in combat or wait. Ends your turn and gives enemies their turn."}
+    };
+    for (int i = 0; i < 5; i++) {
+        json.addObjectInArray();
+        json.addString("action", actions[i][0]);
+        json.addString("description", actions[i][1]);
+        json.endObjectInArray();
+    }
+    json.endArray();
+    
+    // Important item PIDs
+    json.startArray("common_items");
+    const char* items[][3] = {
+        {"40", "Stimpak", "Heals 15-20 HP. Essential for survival. Use when HP is low."},
+        {"41", "Caps ($)", "Currency. Used for trading and bartering. Collect from containers and enemies."},
+        {"144", "Super Stimpak", "Heals more HP than regular Stimpak. Rare and valuable."},
+        {"47", "First Aid Kit", "Used with First Aid skill to heal. More effective with higher skill."},
+        {"91", "Doctor's Bag", "Used with Doctor skill to heal critical injuries."},
+        {"48", "RadAway", "Reduces radiation. Important in irradiated areas."},
+        {"52", "Geiger Counter", "Measures radiation levels. Helps avoid dangerous areas."}
+    };
+    for (int i = 0; i < 7; i++) {
+        json.addObjectInArray();
+        json.addString("pid", items[i][0]);
+        json.addString("name", items[i][1]);
+        json.addString("usage", items[i][2]);
+        json.endObjectInArray();
+    }
+    json.endArray();
+    
+    // Combat system
+    json.startArray("combat_mechanics");
+    json.addObjectInArray();
+    json.addString("mechanic", "Action Points (AP)");
+    json.addString("description", "Each action costs AP. Movement, attacks, item use all consume AP. Turn ends when out of AP or you wait.");
+    json.endObjectInArray();
+    json.addObjectInArray();
+    json.addString("mechanic", "Hit Chance");
+    json.addString("description", "Based on weapon skill, perception, distance, and target's armor class. Higher skills = better accuracy.");
+    json.endObjectInArray();
+    json.addObjectInArray();
+    json.addString("mechanic", "Critical Hits");
+    json.addString("description", "Chance for extra damage. Affected by Luck stat and Better Criticals perk.");
+    json.endObjectInArray();
+    json.addObjectInArray();
+    json.addString("mechanic", "Armor");
+    json.addString("description", "Reduces damage taken. Leather < Metal < Combat < Power Armor. Check AC stat.");
+    json.endObjectInArray();
+    json.endArray();
+    
+    // SPECIAL system
+    json.startArray("special_stats");
+    const char* special[][2] = {
+        {"Strength", "Affects melee damage and carry weight. Important for combat characters."},
+        {"Perception", "Affects ranged accuracy and awareness. Critical for ranged combat."},
+        {"Endurance", "Affects HP and resistances. More HP = more survivability."},
+        {"Charisma", "Affects NPC reactions and companions. Higher = better dialogue options."},
+        {"Intelligence", "Affects skill points per level. Higher = faster character progression."},
+        {"Agility", "Affects AP and sequence. More AP = more actions per turn in combat."},
+        {"Luck", "Affects critical chance and random encounters. General purpose stat."}
+    };
+    for (int i = 0; i < 7; i++) {
+        json.addObjectInArray();
+        json.addString("stat", special[i][0]);
+        json.addString("effect", special[i][1]);
+        json.endObjectInArray();
+    }
+    json.endArray();
+    
+    // Skill usage guide
+    json.startArray("skill_guide");
+    const char* skills[][2] = {
+        {"Small Guns", "Most common weapons. Prioritize early game. Pistols, rifles, SMGs."},
+        {"Energy Weapons", "Late game weapons. Laser/plasma rifles. Very powerful but rare ammo."},
+        {"Melee/Unarmed", "Close combat. Useful when low on ammo. Knives, sledgehammers, fists."},
+        {"First Aid", "Heal without items. Use between combats to save Stimpaks."},
+        {"Doctor", "Heal critical injuries. More effective than First Aid but slower."},
+        {"Sneak", "Avoid combat and get better positioning. Useful for stealing and reconnaissance."},
+        {"Lockpick", "Open locked containers and doors. Essential for accessing loot and shortcuts."},
+        {"Speech", "Better dialogue options. Can avoid combat, get better prices, complete quests peacefully."},
+        {"Barter", "Better trading prices. Save caps by improving this skill."},
+        {"Science", "Use computers and technology. Required for some quests and shortcuts."},
+        {"Repair", "Fix broken items and machinery. Useful for equipment maintenance."}
+    };
+    for (int i = 0; i < 11; i++) {
+        json.addObjectInArray();
+        json.addString("skill", skills[i][0]);
+        json.addString("strategy", skills[i][1]);
+        json.endObjectInArray();
+    }
+    json.endArray();
+    
+    // Survival tips
+    json.startArray("survival_tips");
+    const char* tips[] = {
+        "Save frequently! Use multiple save slots.",
+        "Stimpaks are life-savers. Always carry several.",
+        "Higher skills mean better success rates. Invest in key skills early.",
+        "Check your HP after every combat. Heal before exploring further.",
+        "Ammunition is precious. Aim for high hit-chance shots.",
+        "Talk to NPCs. They provide quests, information, and trading opportunities.",
+        "Explore thoroughly. Containers often have useful items and ammo.",
+        "Sneaking can avoid dangerous encounters. Use it when outnumbered.",
+        "In combat, positioning matters. Use cover and distance.",
+        "Action Points determine how much you can do per turn. Manage them wisely.",
+        "Experience is gained from quests, combat, and exploration. Level up gives skill points.",
+        "Different weapons are effective against different enemies. Experiment.",
+        "Read item descriptions. They explain what items do and how to use them.",
+        "Sequence stat determines turn order. Higher sequence = act first in combat.",
+        "Armor Class (AC) makes you harder to hit. Higher AC = fewer hits taken."
+    };
+    for (int i = 0; i < 15; i++) {
+        json.addObjectInArray();
+        json.addInt("tip_id", i + 1);
+        json.addString("tip", tips[i]);
+        json.endObjectInArray();
+    }
+    json.endArray();
+    
+    // Object types explanation
+    json.startArray("object_types");
+    const char* objTypes[][2] = {
+        {"0", "Item - Can be picked up and used. Weapons, armor, consumables, quest items."},
+        {"1", "Critter - Living beings. Can be friendly NPCs or hostile enemies. Can be talked to or attacked."},
+        {"2", "Scenery - Environment objects. Doors, containers, furniture. Some can be interacted with."},
+        {"3", "Wall - Impassable terrain. Blocks movement and line of sight."},
+        {"5", "Misc - Miscellaneous objects. Varies by context."}
+    };
+    for (int i = 0; i < 5; i++) {
+        json.addObjectInArray();
+        json.addString("type_id", objTypes[i][0]);
+        json.addString("description", objTypes[i][1]);
+        json.endObjectInArray();
+    }
+    json.endArray();
+    
+    // Decision making guide
+    json.startArray("decision_making");
+    json.addObjectInArray();
+    json.addString("situation", "Low HP");
+    json.addString("action", "Use Stimpak (PID 40) immediately or retreat from combat.");
+    json.endObjectInArray();
+    json.addObjectInArray();
+    json.addString("situation", "In Combat");
+    json.addString("action", "Attack if you have good hit chance, or move to better position, or use item to heal.");
+    json.endObjectInArray();
+    json.addObjectInArray();
+    json.addString("situation", "Exploring");
+    json.addString("action", "Move to nearby objects to investigate. Pick up items. Talk to NPCs (type 1 objects).");
+    json.endObjectInArray();
+    json.addObjectInArray();
+    json.addString("situation", "Low Ammo");
+    json.addString("action", "Search containers, avoid unnecessary combat, consider melee weapons.");
+    json.endObjectInArray();
+    json.addObjectInArray();
+    json.addString("situation", "Enemy Nearby");
+    json.addString("action", "If strong: attack. If weak: run or sneak. If talking is possible: try Speech.");
+    json.endObjectInArray();
+    json.endArray();
+    
+    // Game world context
+    json.addString("game_world", "Set in post-nuclear California wasteland. Vault dweller from Vault 13 seeking water chip and fighting Super Mutant threat.");
+    json.addString("primary_goal", "Initially find water chip for vault. Later, stop the Master's army of Super Mutants.");
+    json.addString("gameplay_style", "Turn-based tactical RPG with exploration, combat, quests, and dialogue choices. Character build and skills matter greatly.");
+    
+    // How to control the game via API
+    json.startArray("api_control_guide");
+    json.addObjectInArray();
+    json.addString("step", "1. Read Game State");
+    json.addString("description", "Read ai_state.json file every frame to get current game state including position, HP, nearby objects, inventory.");
+    json.addString("file", "ai_state.json");
+    json.endObjectInArray();
+    
+    json.addObjectInArray();
+    json.addString("step", "2. Analyze State");
+    json.addString("description", "Check player HP, nearby objects, combat state, available items. Determine what action to take.");
+    json.addString("example", "If HP < 30% and have Stimpak (PID 40), use it. If enemy nearby and in combat, attack.");
+    json.endObjectInArray();
+    
+    json.addObjectInArray();
+    json.addString("step", "3. Write Action");
+    json.addString("description", "Write a JSON file with your chosen action. File is deleted after being read by game.");
+    json.addString("file", "ai_action.json");
+    json.endObjectInArray();
+    
+    json.addObjectInArray();
+    json.addString("step", "4. Check Result");
+    json.addString("description", "In next state update, check last_action_result field to see if action succeeded or failed.");
+    json.addString("example", "success: moved to tile 20150' or 'error: not enough AP'");
+    json.endObjectInArray();
+    json.endArray();
+    
+    // Detailed action examples with JSON
+    json.startArray("action_examples");
+    
+    json.addObjectInArray();
+    json.addString("action_name", "Move to Location");
+    json.addString("when_to_use", "Exploring, repositioning, approaching objects or NPCs");
+    json.addString("json_format", "{\"action\": \"move\", \"target_tile\": 20150}");
+    json.addString("how_to_choose_tile", "Look at nearby_objects array in state. Get tile number of interesting object. Or add/subtract from player_tile to move nearby.");
+    json.addString("tips", "In combat costs AP. Out of combat is free. Can't move through walls or other obstacles.");
+    json.endObjectInArray();
+    
+    json.addObjectInArray();
+    json.addString("action_name", "Attack Enemy");
+    json.addString("when_to_use", "In combat, when enemy is visible and you have weapon");
+    json.addString("json_format", "{\"action\": \"attack\", \"target_tile\": 20105}");
+    json.addString("how_to_choose_tile", "Find critter in nearby_objects with is_dead: false. Use their tile number as target.");
+    json.addString("tips", "Costs AP. Check you have enough AP. Better to attack when close for higher hit chance.");
+    json.endObjectInArray();
+    
+    json.addObjectInArray();
+    json.addString("action_name", "Use Healing Item");
+    json.addString("when_to_use", "When HP is low (below 50% of max)");
+    json.addString("json_format", "{\"action\": \"use_item\", \"target_pid\": 40}");
+    json.addString("how_to_find_pid", "Look in inventory array for item with name 'Stimpak'. Use its pid value (usually 40).");
+    json.addString("tips", "Always heal before HP gets too low. Stimpak (40) heals ~15-20 HP. Super Stimpak (144) heals more.");
+    json.endObjectInArray();
+    
+    json.addObjectInArray();
+    json.addString("action_name", "Pick Up Item");
+    json.addString("when_to_use", "When valuable item on ground nearby (ammo, weapons, caps, stimpaks)");
+    json.addString("json_format", "{\"action\": \"pickup\", \"target_tile\": 20105, \"target_pid\": 41}");
+    json.addString("how_to_find", "Look in nearby_objects for type: 0 (items). Use tile and pid from that object.");
+    json.addString("tips", "Always pick up Stimpaks, ammo, caps. Check carry_weight stat to avoid overencumbrance.");
+    json.endObjectInArray();
+    
+    json.addObjectInArray();
+    json.addString("action_name", "Wait/Skip Turn");
+    json.addString("when_to_use", "In combat when can't do anything useful, or to pass time");
+    json.addString("json_format", "{\"action\": \"wait\"}");
+    json.addString("tips", "Ends your turn in combat. Use when out of AP or no good action available.");
+    json.endObjectInArray();
+    json.endArray();
+    
+    // State interpretation guide
+    json.startArray("state_interpretation");
+    
+    json.addObjectInArray();
+    json.addString("field", "hit_points / max_hit_points");
+    json.addString("meaning", "Current and maximum health. If hit_points < 30% of max, heal immediately!");
+    json.addString("action", "If low, use Stimpak (PID 40) or retreat from combat.");
+    json.endObjectInArray();
+    
+    json.addObjectInArray();
+    json.addString("field", "action_points / max_action_points");
+    json.addString("meaning", "AP available this turn. Each action costs AP. More agility = more max AP.");
+    json.addString("action", "Track AP before acting. If low, choose cheap actions or wait.");
+    json.endObjectInArray();
+    
+    json.addObjectInArray();
+    json.addString("field", "in_combat");
+    json.addString("meaning", "true = in turn-based combat, false = exploring freely");
+    json.addString("action", "In combat: be tactical, manage AP. Out of combat: explore freely, heal up.");
+    json.endObjectInArray();
+    
+    json.addObjectInArray();
+    json.addString("field", "nearby_objects[]");
+    json.addString("meaning", "Objects within 10 tiles. Includes NPCs (type 1), items (type 0), scenery (type 2).");
+    json.addString("action", "Check distance to prioritize. Interact with close objects first. Attack type 1 if hostile.");
+    json.endObjectInArray();
+    
+    json.addObjectInArray();
+    json.addString("field", "inventory[]");
+    json.addString("meaning", "Items you're carrying. Check for Stimpaks (40), ammo, weapons, tools.");
+    json.addString("action", "Use consumables when needed. Track quantities. Pick up more when low.");
+    json.endObjectInArray();
+    
+    json.addObjectInArray();
+    json.addString("field", "skills[]");
+    json.addString("meaning", "Your skill levels. Higher = better success rate. Small Guns, Speech, Lockpick most useful early.");
+    json.addString("action", "Focus on improving useful skills when leveling. Check which skills support your strategy.");
+    json.endObjectInArray();
+    
+    json.addObjectInArray();
+    json.addString("field", "last_action_result");
+    json.addString("meaning", "Feedback from your last action. 'success: ...' or 'error: ...'");
+    json.addString("action", "Read this to know if your action worked. If error, try different approach.");
+    json.endObjectInArray();
+    
+    json.addObjectInArray();
+    json.addString("field", "recent_events[]");
+    json.addString("meaning", "Last 50 events. Shows what happened recently (damage, level ups, actions).");
+    json.addString("action", "Review to understand recent game state changes. Learn from mistakes.");
+    json.endObjectInArray();
+    json.endArray();
+    
+    // Decision tree examples
+    json.startArray("decision_trees");
+    
+    json.addObjectInArray();
+    json.addString("scenario", "Combat Situation");
+    json.addString("decision_logic", "IF in_combat AND hit_points < 30% max: use Stimpak. ELIF enemy nearby: attack closest. ELIF action_points low: wait. ELSE: move closer to enemy.");
+    json.endObjectInArray();
+    
+    json.addObjectInArray();
+    json.addString("scenario", "Exploration");
+    json.addString("decision_logic", "IF item nearby (type 0): pickup. ELIF NPC nearby (type 1): move towards to interact. ELIF unexplored direction: move that direction. ELSE: move randomly.");
+    json.endObjectInArray();
+    
+    json.addObjectInArray();
+    json.addString("scenario", "Low Health");
+    json.addString("decision_logic", "IF Stimpak in inventory: use it. ELIF not in combat: search for items. ELIF in combat: retreat/wait. ELSE: hope for the best.");
+    json.endObjectInArray();
+    
+    json.addObjectInArray();
+    json.addString("scenario", "First Turn");
+    json.addString("decision_logic", "Read state fully. Check HP, inventory, nearby objects. Orient yourself. Plan next few actions based on state.");
+    json.endObjectInArray();
+    json.endArray();
+    
+    // Common mistakes to avoid
+    json.startArray("common_mistakes");
+    const char* mistakes[] = {
+        "Don't spam actions. Wait for last_action_result before sending next action.",
+        "Don't ignore HP. Heal when HP < 50%. Don't wait until critical.",
+        "Don't waste AP on unnecessary movement in combat. Each tile costs AP.",
+        "Don't attack without checking if you have ammo or weapon equipped.",
+        "Don't pick up everything. Check carry_weight. Heavy items slow you down.",
+        "Don't move randomly. Check nearby_objects first to find interesting targets.",
+        "Don't forget to check in_combat status. Combat has different rules.",
+        "Don't send invalid tile numbers. Must be valid reachable location.",
+        "Don't use items you don't have. Check inventory[] first.",
+        "Don't attack friendly NPCs. Check if critter is hostile before attacking.",
+        "Don't ignore action feedback. Read last_action_result to learn.",
+        "Don't rush. Take time to analyze state before acting.",
+        "Don't forget AP management in combat. Track action_points carefully.",
+        "Don't move into unexplored areas at low HP. Heal first, then explore.",
+        "Don't waste consumables. Use healing items only when needed."
+    };
+    for (int i = 0; i < 15; i++) {
+        json.addObjectInArray();
+        json.addString("mistake", mistakes[i]);
+        json.endObjectInArray();
+    }
+    json.endArray();
+    
+    // Quick reference
+    json.addString("quick_reference", "Read ai_state.json -> Analyze HP, AP, nearby objects -> Decide action -> Write ai_action.json -> Check result in next state");
+    json.addString("most_important", "Keep HP above 50%. Use Stimpak (PID 40) when low. In combat: manage AP carefully. Explore: pickup items, talk to NPCs.");
+    json.addString("cooldown_info", "100ms between actions. Don't send actions faster than this or you'll get 'error: cooldown active'.");
+    
+    // JSON Format Specifications
+    json.startArray("json_schemas");
+    
+    // Input: What you READ (ai_state.json)
+    json.addObjectInArray();
+    json.addString("file", "ai_state.json");
+    json.addString("direction", "INPUT - Read this file to understand game state");
+    json.addString("format", "Valid JSON object with specific fields");
+    json.addString("schema", "{"
+        "\"player_tile\": <integer>, "
+        "\"player_elevation\": <integer 0-2>, "
+        "\"player_rotation\": <integer 0-5>, "
+        "\"hit_points\": <integer>, "
+        "\"max_hit_points\": <integer>, "
+        "\"action_points\": <integer>, "
+        "\"max_action_points\": <integer>, "
+        "\"level\": <integer>, "
+        "\"experience\": <integer>, "
+        "\"in_combat\": <boolean>, "
+        "\"strength\": <integer 1-10>, "
+        "\"perception\": <integer 1-10>, "
+        "\"endurance\": <integer 1-10>, "
+        "\"charisma\": <integer 1-10>, "
+        "\"intelligence\": <integer 1-10>, "
+        "\"agility\": <integer 1-10>, "
+        "\"luck\": <integer 1-10>, "
+        "\"skills\": [{\"name\": <string>, \"value\": <integer>}, ...], "
+        "\"perks\": [{\"name\": <string>, \"level\": <integer>}, ...], "
+        "\"map_name\": <string>, "
+        "\"nearby_objects\": [{\"tile\": <int>, \"distance\": <int>, \"type\": <int>, \"pid\": <int>, \"name\": <string>, \"is_dead\": <bool>, \"hp\": <int>}, ...], "
+        "\"inventory\": [{\"pid\": <int>, \"quantity\": <int>, \"name\": <string>}, ...], "
+        "\"total_damage_dealt\": <integer>, "
+        "\"total_kills\": <integer>, "
+        "\"session_time_seconds\": <integer>, "
+        "\"last_action_result\": <string>, "
+        "\"recent_events\": [{\"event\": <string>}, ...]}");
+    json.addString("reading_tips", "Parse as JSON. Access fields by name. All field names are strings. Values are typed (int/bool/string/array).");
+    json.endObjectInArray();
+    
+    // Output: What you WRITE (ai_action.json)
+    json.addObjectInArray();
+    json.addString("file", "ai_action.json");
+    json.addString("direction", "OUTPUT - Write this file to send action to game");
+    json.addString("format", "Must be valid JSON object with 'action' field");
+    json.addString("required_field", "action - String specifying action type");
+    json.addString("optional_fields", "target_tile (int), target_pid (int) - depends on action");
+    json.endObjectInArray();
+    
+    json.endArray();
+    
+    // Detailed action JSON formats
+    json.startArray("action_json_formats");
+    
+    json.addObjectInArray();
+    json.addString("action_type", "move");
+    json.addString("required_fields", "action, target_tile");
+    json.addString("json_example", "{\"action\": \"move\", \"target_tile\": 20150}");
+    json.addString("field_types", "action: string, target_tile: integer");
+    json.addString("validation", "target_tile must be valid integer 0-39999. No quotes around numbers!");
+    json.endObjectInArray();
+    
+    json.addObjectInArray();
+    json.addString("action_type", "attack");
+    json.addString("required_fields", "action, target_tile");
+    json.addString("json_example", "{\"action\": \"attack\", \"target_tile\": 20105}");
+    json.addString("field_types", "action: string, target_tile: integer");
+    json.addString("validation", "target_tile must contain a critter. Get from nearby_objects where type=1.");
+    json.endObjectInArray();
+    
+    json.addObjectInArray();
+    json.addString("action_type", "use_item");
+    json.addString("required_fields", "action, target_pid");
+    json.addString("json_example", "{\"action\": \"use_item\", \"target_pid\": 40}");
+    json.addString("field_types", "action: string, target_pid: integer");
+    json.addString("validation", "target_pid must exist in inventory array. Get pid value from inventory item.");
+    json.endObjectInArray();
+    
+    json.addObjectInArray();
+    json.addString("action_type", "pickup");
+    json.addString("required_fields", "action, target_tile, target_pid");
+    json.addString("json_example", "{\"action\": \"pickup\", \"target_tile\": 20105, \"target_pid\": 41}");
+    json.addString("field_types", "action: string, target_tile: integer, target_pid: integer");
+    json.addString("validation", "Both tile and pid must match an item in nearby_objects where type=0.");
+    json.endObjectInArray();
+    
+    json.addObjectInArray();
+    json.addString("action_type", "wait");
+    json.addString("required_fields", "action");
+    json.addString("json_example", "{\"action\": \"wait\"}");
+    json.addString("field_types", "action: string");
+    json.addString("validation", "No additional fields needed. Simple action.");
+    json.endObjectInArray();
+    
+    json.endArray();
+    
+    // JSON syntax rules
+    json.startArray("json_syntax_rules");
+    
+    json.addObjectInArray();
+    json.addString("rule", "Use double quotes for strings");
+    json.addString("correct", "\"action\": \"move\"");
+    json.addString("wrong", "'action': 'move' or action: move");
+    json.endObjectInArray();
+    
+    json.addObjectInArray();
+    json.addString("rule", "Numbers have NO quotes");
+    json.addString("correct", "\"target_tile\": 20150");
+    json.addString("wrong", "\"target_tile\": \"20150\"");
+    json.endObjectInArray();
+    
+    json.addObjectInArray();
+    json.addString("rule", "Booleans are lowercase true/false");
+    json.addString("correct", "\"in_combat\": true");
+    json.addString("wrong", "\"in_combat\": True or \"in_combat\": \"true\"");
+    json.endObjectInArray();
+    
+    json.addObjectInArray();
+    json.addString("rule", "Field names must have quotes");
+    json.addString("correct", "{\"action\": \"move\"}");
+    json.addString("wrong", "{action: \"move\"}");
+    json.endObjectInArray();
+    
+    json.addObjectInArray();
+    json.addString("rule", "Use commas between fields");
+    json.addString("correct", "{\"action\": \"move\", \"target_tile\": 100}");
+    json.addString("wrong", "{\"action\": \"move\" \"target_tile\": 100}");
+    json.endObjectInArray();
+    
+    json.addObjectInArray();
+    json.addString("rule", "NO trailing comma after last field");
+    json.addString("correct", "{\"action\": \"wait\"}");
+    json.addString("wrong", "{\"action\": \"wait\",}");
+    json.endObjectInArray();
+    
+    json.addObjectInArray();
+    json.addString("rule", "Curly braces for objects");
+    json.addString("correct", "{\"action\": \"move\", \"target_tile\": 100}");
+    json.addString("note", "Start with { and end with }");
+    json.endObjectInArray();
+    
+    json.addObjectInArray();
+    json.addString("rule", "Square brackets for arrays");
+    json.addString("example", "\"inventory\": [{\"pid\": 40}, {\"pid\": 41}]");
+    json.addString("note", "Arrays contain multiple items. Access by index.");
+    json.endObjectInArray();
+    
+    json.endArray();
+    
+    // Parsing instructions
+    json.startArray("parsing_instructions");
+    
+    json.addObjectInArray();
+    json.addString("step", "1. Load ai_state.json");
+    json.addString("instruction", "Read entire file as text. Parse as JSON object. Most languages have JSON.parse() or equivalent.");
+    json.addString("example_python", "import json; state = json.load(open('ai_state.json'))");
+    json.endObjectInArray();
+    
+    json.addObjectInArray();
+    json.addString("step", "2. Access fields");
+    json.addString("instruction", "Use dot notation or bracket notation to access fields.");
+    json.addString("example_python", "hp = state['hit_points']; in_combat = state['in_combat']");
+    json.endObjectInArray();
+    
+    json.addObjectInArray();
+    json.addString("step", "3. Iterate arrays");
+    json.addString("instruction", "Loop through arrays to find specific items or objects.");
+    json.addString("example_python", "for obj in state['nearby_objects']: if obj['type'] == 1: print('Found NPC')");
+    json.endObjectInArray();
+    
+    json.addObjectInArray();
+    json.addString("step", "4. Check field existence");
+    json.addString("instruction", "Some fields may not exist. Check before accessing.");
+    json.addString("example_python", "if 'hp' in obj: enemy_hp = obj['hp']");
+    json.endObjectInArray();
+    
+    json.addObjectInArray();
+    json.addString("step", "5. Create action object");
+    json.addString("instruction", "Build a Python dict or JavaScript object with action fields.");
+    json.addString("example_python", "action = {'action': 'move', 'target_tile': 20150}");
+    json.endObjectInArray();
+    
+    json.addObjectInArray();
+    json.addString("step", "6. Write action to file");
+    json.addString("instruction", "Convert object to JSON string and write to ai_action.json.");
+    json.addString("example_python", "import json; json.dump(action, open('ai_action.json', 'w'))");
+    json.endObjectInArray();
+    
+    json.endArray();
+    
+    // Common parsing errors
+    json.startArray("common_parsing_errors");
+    
+    json.addObjectInArray();
+    json.addString("error", "Numbers as strings");
+    json.addString("problem", "Writing \"target_tile\": \"20150\" instead of \"target_tile\": 20150");
+    json.addString("fix", "Remove quotes around numbers. Only strings need quotes.");
+    json.endObjectInArray();
+    
+    json.addObjectInArray();
+    json.addString("error", "Single quotes instead of double");
+    json.addString("problem", "{'action': 'move'} - JSON requires double quotes");
+    json.addString("fix", "Use double quotes: {\"action\": \"move\"}");
+    json.endObjectInArray();
+    
+    json.addObjectInArray();
+    json.addString("error", "Missing comma");
+    json.addString("problem", "{\"action\": \"move\" \"target_tile\": 100}");
+    json.addString("fix", "Add comma: {\"action\": \"move\", \"target_tile\": 100}");
+    json.endObjectInArray();
+    
+    json.addObjectInArray();
+    json.addString("error", "Trailing comma");
+    json.addString("problem", "{\"action\": \"wait\",}");
+    json.addString("fix", "Remove last comma: {\"action\": \"wait\"}");
+    json.endObjectInArray();
+    
+    json.addObjectInArray();
+    json.addString("error", "Wrong field names");
+    json.addString("problem", "Writing 'type' instead of 'action' as main field");
+    json.addString("fix", "Use exact field names: 'action', 'target_tile', 'target_pid'");
+    json.endObjectInArray();
+    
+    json.addObjectInArray();
+    json.addString("error", "Missing required fields");
+    json.addString("problem", "{\"action\": \"move\"} without target_tile");
+    json.addString("fix", "Include all required fields for that action type");
+    json.endObjectInArray();
+    
+    json.endArray();
+    
+    // Complete example workflow
+    json.addString("complete_example_workflow", 
+        "1. Read ai_state.json and parse JSON. "
+        "2. Check hit_points: if < 30, find Stimpak in inventory (name='Stimpak'), get its pid. "
+        "3. Create action: {\"action\": \"use_item\", \"target_pid\": 40}. "
+        "4. Write to ai_action.json using JSON.dump/stringify. "
+        "5. Wait 100ms (cooldown). "
+        "6. Read next state update. "
+        "7. Check last_action_result: should say 'success: used Stimpak'. "
+        "8. Verify hit_points increased. "
+        "9. Continue with next decision.");
+    
+    json.endObject();
+    
+    // Write to file
+    char tempPath[256];
+    snprintf(tempPath, sizeof(tempPath), "%s.tmp", kKnowledgeFilePath);
+    
+    FILE* fp = fopen(tempPath, "w");
+    if (fp) {
+        fwrite(json.c_str(), 1, json.length(), fp);
+        fclose(fp);
+        rename(tempPath, kKnowledgeFilePath);
+        gKnowledgeWritten = true;
+    }
 }
 
 // Write current game state to JSON file
@@ -320,6 +955,117 @@ static void writeGameState() {
     
     // Action feedback
     json.addString("last_action_result", gLastActionResult);
+    
+    // Context hints for AI
+    json.startArray("ai_hints");
+    
+    // Health status hint
+    float hpPercent = (float)currentHP / stat_level(obj_dude, STAT_MAXIMUM_HIT_POINTS) * 100.0f;
+    if (hpPercent < 30.0f) {
+        json.addObjectInArray();
+        json.addString("priority", "CRITICAL");
+        json.addString("hint", "HP very low! Use Stimpak immediately or retreat!");
+        json.addString("suggested_action", "{\"action\": \"use_item\", \"target_pid\": 40}");
+        json.endObjectInArray();
+    } else if (hpPercent < 50.0f) {
+        json.addObjectInArray();
+        json.addString("priority", "HIGH");
+        json.addString("hint", "HP below 50%. Consider healing soon.");
+        json.addString("suggested_action", "{\"action\": \"use_item\", \"target_pid\": 40}");
+        json.endObjectInArray();
+    }
+    
+    // Combat hint
+    if (isInCombat()) {
+        json.addObjectInArray();
+        json.addString("priority", "INFO");
+        json.addString("hint", "In combat mode. Actions cost AP. Manage action points carefully.");
+        json.addString("info", "Check action_points before acting. Each action has AP cost.");
+        json.endObjectInArray();
+        
+        if (obj_dude->data.critter.combat.ap < 3) {
+            json.addObjectInArray();
+            json.addString("priority", "MEDIUM");
+            json.addString("hint", "Low AP. Consider waiting to end turn.");
+            json.addString("suggested_action", "{\"action\": \"wait\"}");
+            json.endObjectInArray();
+        }
+    }
+    
+    // Nearby objects hint
+    Object* nearestEnemy = NULL;
+    Object* nearestItem = NULL;
+    int nearestEnemyDist = 999;
+    int nearestItemDist = 999;
+    
+    Object* obj = obj_find_first_at(obj_dude->elevation);
+    while (obj != NULL) {
+        if (obj != obj_dude) {
+            int distance = obj_dist(obj_dude, obj);
+            if (distance <= 10) {
+                if (FID_TYPE(obj->fid) == OBJ_TYPE_CRITTER && !critter_is_dead(obj)) {
+                    if (distance < nearestEnemyDist) {
+                        nearestEnemy = obj;
+                        nearestEnemyDist = distance;
+                    }
+                } else if (FID_TYPE(obj->fid) == OBJ_TYPE_ITEM) {
+                    if (distance < nearestItemDist) {
+                        nearestItem = obj;
+                        nearestItemDist = distance;
+                    }
+                }
+            }
+        }
+        obj = obj_find_next_at();
+    }
+    
+    if (nearestEnemy && isInCombat()) {
+        json.addObjectInArray();
+        json.addString("priority", "HIGH");
+        char hintText[128];
+        snprintf(hintText, sizeof(hintText), "Enemy at distance %d. Consider attacking.", nearestEnemyDist);
+        json.addString("hint", hintText);
+        char actionText[128];
+        snprintf(actionText, sizeof(actionText), "{\"action\": \"attack\", \"target_tile\": %d}", nearestEnemy->tile);
+        json.addString("suggested_action", actionText);
+        json.endObjectInArray();
+    }
+    
+    if (nearestItem && !isInCombat()) {
+        json.addObjectInArray();
+        json.addString("priority", "LOW");
+        char hintText[128];
+        char* itemName = object_name(nearestItem);
+        snprintf(hintText, sizeof(hintText), "Item '%s' nearby at distance %d.", itemName ? itemName : "Unknown", nearestItemDist);
+        json.addString("hint", hintText);
+        char actionText[128];
+        snprintf(actionText, sizeof(actionText), "{\"action\": \"pickup\", \"target_tile\": %d, \"target_pid\": %d}", nearestItem->tile, nearestItem->pid);
+        json.addString("suggested_action", actionText);
+        json.endObjectInArray();
+    }
+    
+    // No stimpaks warning
+    bool hasStimpak = false;
+    for (int i = 0; i < inventory->length; i++) {
+        InventoryItem* item = &(inventory->items[i]);
+        if (item->item && item->item->pid == 40) {
+            hasStimpak = true;
+            break;
+        }
+    }
+    
+    if (!hasStimpak && hpPercent < 100.0f) {
+        json.addObjectInArray();
+        json.addString("priority", "MEDIUM");
+        json.addString("hint", "No Stimpaks in inventory! Look for healing items.");
+        json.addString("info", "Search containers and bodies for Stimpaks (PID 40)");
+        json.endObjectInArray();
+    }
+    
+    json.endArray();
+    
+    // Help text - remind AI how to act
+    json.addString("help", "Read this state. Check HP and hints. Decide action from: move, attack, use_item, pickup, wait. Write valid JSON to ai_action.json. Example: {\"action\": \"move\", \"target_tile\": 20150}");
     
     // Recent events (last 10)
     json.startArray("recent_events");
@@ -561,6 +1307,7 @@ void ai_control_api_init() {
         gTotalKills = 0;
         gEventCount = 0;
         gEventWriteIndex = 0;
+        gKnowledgeWritten = false;
         snprintf(gLastActionResult, sizeof(gLastActionResult), "none");
         
         // Clear events
@@ -569,6 +1316,9 @@ void ai_control_api_init() {
         }
         
         addEvent("system", "AI Control API initialized");
+        
+        // Write game knowledge base for AI
+        writeGameKnowledge();
     }
 }
 
@@ -584,6 +1334,7 @@ void ai_control_api_exit() {
     remove(kActionFilePath);
     remove(kStateFilePath);
     remove(kEventsFilePath);
+    remove(kKnowledgeFilePath);
 }
 
 // Check if API is enabled
