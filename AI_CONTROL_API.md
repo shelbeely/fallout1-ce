@@ -1,8 +1,8 @@
-# AI Control API - Enhanced for Twitch Streaming and AI Agents
+# AI Control API - Complete Solution for AI-Driven Fallout 1 Streaming
 
 ## Overview
 
-The AI Control API provides a comprehensive JSON-based interface for external AI agents and Twitch chat integration with Fallout 1 Community Edition. It includes a complete knowledge base to help AI models understand the game, how to control it, and proper JSON formatting.
+The AI Control API provides a comprehensive JSON-based interface for external AI agents (especially LLMs) to play Fallout 1 Community Edition with full character immersion, memory tracking, and automatic website generation for Twitch streaming. **Perfect for AI-controlled gameplay streams with full story tracking.**
 
 ## Configuration
 
@@ -12,52 +12,113 @@ To enable the API, add the following line to your `fallout.cfg` file under the `
 ai_control_api=1
 ```
 
-## How It Works
+## Complete System Architecture
 
-The API operates through JSON files with enhanced features for AI learning and streaming:
+The API provides **everything needed for an AI-driven Twitch stream**:
 
-1. **`ai_state.json`** - Written by the game every frame with comprehensive state + context hints
-2. **`ai_action.json`** - Read by the game and deleted after processing
-3. **`ai_knowledge.json`** - Written once at startup, contains complete game knowledge for AI models
-4. **Action cooldown** - 100ms between actions to prevent spam
-5. **Event tracking** - Recent events logged for stream overlays
-6. **Action feedback** - Success/failure results for each action
-7. **AI hints** - Real-time suggestions embedded in state
+1. **`ai_knowledge.json`** - Complete game encyclopedia (written once at startup)
+2. **`ai_state.json`** - Live game state (updated every frame)
+3. **`ai_action.json`** - AI writes actions here (read and deleted by game)
+4. **`ai_memory.json`** - Decision memory log (persistent learning)
+5. **`character_journey.html`** - Auto-generated website (updates every second)
 
-## New: AI Knowledge Base (`ai_knowledge.json`)
+## New: Character Role-Play & Memory System
 
-When the API initializes, it creates a comprehensive knowledge base file that includes:
+### Role-Play Context (In ai_knowledge.json)
 
-### Game Knowledge
-- **Core objectives** - Main quest goals and time limits
-- **Available actions** - Complete list of actions with descriptions
-- **Common items** - Important item PIDs and their uses (Stimpaks, healing, etc.)
-- **Combat mechanics** - How combat works, AP system, hit chances
-- **SPECIAL stats** - What each stat does and why it matters
-- **Skill guide** - How to use skills effectively
-- **Survival tips** - 15+ tips for staying alive
-- **Object types** - What different object types mean (items, critters, scenery)
-- **Decision making** - When to heal, attack, explore, etc.
+The AI receives complete character context to stay in character as the Vault Dweller:
 
-### API Control Instructions
-- **API control guide** - Step-by-step how to use the API
-- **Action examples** - Detailed examples with JSON for each action type
-- **State interpretation** - How to read and understand ai_state.json fields
-- **Decision trees** - Logic flows for different game situations
+- **Character Role**: "Vault Dweller from Vault 13"
+- **Background**: Underground shelter resident, chosen to find water chip, 150 days to save vault
+- **Personality**: Brave but inexperienced, cautious but determined, cares about vault survival
+- **Speaking Style**: First-person, practical, survival-focused
+- **Example**: "I need to find that water chip, but I should heal first - I'm badly injured."
 
-### JSON Format Documentation
-- **JSON schemas** - Complete structure of input/output files
-- **Action JSON formats** - Exact format for each action with examples
-- **JSON syntax rules** - How to write valid JSON (quotes, commas, brackets)
-- **Parsing instructions** - How to read JSON and write actions (Python examples)
-- **Common errors** - Mistakes to avoid and how to fix them
-- **Complete workflow** - End-to-end example of reading state and taking action
+The AI knows it's representing a real character with motivations, not just playing a game.
 
-This knowledge base is designed to be read once by an AI model at initialization to understand:
-- The game's setting, objectives, and mechanics
-- How to control the game through JSON files
-- Proper JSON syntax and formatting
-- What actions to take in different situations
+### Memory Tracking (ai_memory.json)
+
+Every significant action is recorded with full context:
+
+```json
+{
+  "description": "AI decision memory - records actions, outcomes, and learned experiences",
+  "total_memories": 45,
+  "memories": [
+    {
+      "map": "V13Ent",
+      "tile": 20105,
+      "elevation": 0,
+      "action": "attack",
+      "target": "Radscorpion",
+      "result": "Killed Radscorpion - threat eliminated",
+      "timestamp": 1704067200
+    },
+    {
+      "map": "Junktown",
+      "tile": 15200,
+      "elevation": 0,
+      "action": "use_item",
+      "target": "Stimpak",
+      "result": "success: used Stimpak",
+      "timestamp": 1704067350
+    }
+  ]
+}
+```
+
+**Memory enables:**
+- Learning from past mistakes
+- Remembering dangerous locations
+- Tracking story progression
+- Building strategy from experience
+- Maintaining continuity across sessions
+
+### Comprehensive Item & Enemy Database
+
+The knowledge base now includes detailed stats:
+
+**Weapons Database** (14 weapons):
+- Name, damage range, AP cost, ammo type, tactical notes
+- Example: "Plasma Rifle: 30-65 damage, 25 range, Microfusion ammo - Late game extremely powerful"
+
+**Armor Database** (8 armor types):
+- AC bonus, damage resistance, special properties
+- Example: "Power Armor: +25 AC, 40% resist, +3 STR - Best armor, quest reward"
+
+**Enemy Database** (10 enemy types):
+- HP range, weaknesses, strengths, combat strategies
+- Example: "Deathclaw: 200-300 HP, Weakness: Eye shots/plasma, DEADLY - Run if possible"
+
+**Consumables** (16 items):
+- PID, effects, tactical usage notes
+- Example: "Stimpak (PID 40): Heals 15-20 HP - ESSENTIAL. Always carry 5+. Use at <50% HP"
+
+**Ammunition Types** (9 types):
+- Rarity, usage, availability notes
+
+## Auto-Generated Website for Streaming
+
+###  character_journey.html - Live Stream Overlay
+
+The game automatically generates a beautiful HTML page that updates every 10 seconds, perfect for OBS browser source overlay:
+
+**Features:**
+- 🎮 **Real-time character stats** (HP, Level, XP, Location)
+- ⭐ **S.P.E.C.I.A.L. attributes** with progress bars
+- 🎯 **All 18 skills** with percentage bars
+- 🌟 **Perks list** with ranks
+- 📜 **Complete journey timeline** (last 50 memories)
+- 📰 **Recent events feed**
+- 🔄 **Auto-refresh** every 10 seconds
+- 🎨 **Fallout-themed design** (green terminal aesthetic)
+
+**Usage for Twitch:**
+1. Open `character_journey.html` in OBS as Browser Source
+2. Set width to 1920x1080 or your stream resolution
+3. Enable "Refresh browser when scene becomes active"
+4. Position as full-screen overlay or side panel
+5. Chat can see live character progression!
 
 
 

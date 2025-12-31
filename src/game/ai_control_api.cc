@@ -26,6 +26,7 @@ static const char* kActionFilePath = "ai_action.json";
 static const char* kStateFilePath = "ai_state.json";
 static const char* kEventsFilePath = "ai_events.json";
 static const char* kKnowledgeFilePath = "ai_knowledge.json";
+static const char* kMemoryFilePath = "ai_memory.json";
 
 // Event tracking
 #define MAX_RECENT_EVENTS 50
@@ -47,6 +48,48 @@ static int gLastLevel = 0;
 
 // Knowledge base written once at initialization
 static bool gKnowledgeWritten = false;
+
+// Memory tracking
+#define MAX_MEMORY_ENTRIES 200
+struct MemoryEntry {
+    int tile;
+    int elevation;
+    char mapName[32];
+    char action[64];
+    char target[64];
+    char result[128];
+    int timestamp;
+    bool active;
+};
+static MemoryEntry gMemoryEntries[MAX_MEMORY_ENTRIES];
+static int gMemoryIndex = 0;
+static int gMemoryCount = 0;
+
+// Items collected tracking
+#define MAX_ITEMS_COLLECTED 500
+struct ItemCollected {
+    int pid;
+    char name[64];
+    int quantity;
+    char mapName[32];
+    int timestamp;
+    bool active;
+};
+static ItemCollected gItemsCollected[MAX_ITEMS_COLLECTED];
+static int gItemsCollectedIndex = 0;
+static int gItemsCollectedCount = 0;
+
+// Quest/milestone tracking
+#define MAX_MILESTONES 100
+struct Milestone {
+    char description[128];
+    char location[32];
+    int timestamp;
+    bool active;
+};
+static Milestone gMilestones[MAX_MILESTONES];
+static int gMilestonesIndex = 0;
+static int gMilestonesCount = 0;
 
 // Simple JSON writer helpers
 class JsonWriter {
@@ -159,6 +202,136 @@ static int getCurrentTimeMs() {
     return (int)(time(NULL) * 1000);
 }
 
+// Add entry to memory log
+static void addMemory(const char* action, const char* target, const char* result) {
+    if (!obj_dude) return;
+    
+    MemoryEntry* entry = &gMemoryEntries[gMemoryIndex];
+    entry->tile = obj_dude->tile;
+    entry->elevation = obj_dude->elevation;
+    
+    int mapIndex = map_get_index_number();
+    if (mapIndex != -1) {
+        char* mapName = map_get_short_name(mapIndex);
+        if (mapName) {
+            strncpy(entry->mapName, mapName, sizeof(entry->mapName) - 1);
+            entry->mapName[sizeof(entry->mapName) - 1] = '\0';
+        }
+    }
+    
+    strncpy(entry->action, action, sizeof(entry->action) - 1);
+    entry->action[sizeof(entry->action) - 1] = '\0';
+    
+    strncpy(entry->target, target, sizeof(entry->target) - 1);
+    entry->target[sizeof(entry->target) - 1] = '\0';
+    
+    strncpy(entry->result, result, sizeof(entry->result) - 1);
+    entry->result[sizeof(entry->result) - 1] = '\0';
+    
+    entry->timestamp = getCurrentTimeMs() / 1000; // seconds since epoch
+    entry->active = true;
+    
+    gMemoryIndex = (gMemoryIndex + 1) % MAX_MEMORY_ENTRIES;
+    if (gMemoryCount < MAX_MEMORY_ENTRIES) {
+        gMemoryCount++;
+    }
+}
+
+// Track item collected
+static void addItemCollected(int pid, const char* itemName, int quantity) {
+    if (!obj_dude) return;
+    
+    ItemCollected* item = &gItemsCollected[gItemsCollectedIndex];
+    item->pid = pid;
+    item->quantity = quantity;
+    
+    strncpy(item->name, itemName ? itemName : "Unknown", sizeof(item->name) - 1);
+    item->name[sizeof(item->name) - 1] = '\0';
+    
+    int mapIndex = map_get_index_number();
+    if (mapIndex != -1) {
+        char* mapName = map_get_short_name(mapIndex);
+        if (mapName) {
+            strncpy(item->mapName, mapName, sizeof(item->mapName) - 1);
+            item->mapName[sizeof(item->mapName) - 1] = '\0';
+        }
+    }
+    
+    item->timestamp = getCurrentTimeMs() / 1000;
+    item->active = true;
+    
+    gItemsCollectedIndex = (gItemsCollectedIndex + 1) % MAX_ITEMS_COLLECTED;
+    if (gItemsCollectedCount < MAX_ITEMS_COLLECTED) {
+        gItemsCollectedCount++;
+    }
+}
+
+// Track milestone
+static void addMilestone(const char* description) {
+    if (!obj_dude) return;
+    
+    Milestone* milestone = &gMilestones[gMilestonesIndex];
+    
+    strncpy(milestone->description, description, sizeof(milestone->description) - 1);
+    milestone->description[sizeof(milestone->description) - 1] = '\0';
+    
+    int mapIndex = map_get_index_number();
+    if (mapIndex != -1) {
+        char* mapName = map_get_short_name(mapIndex);
+        if (mapName) {
+            strncpy(milestone->location, mapName, sizeof(milestone->location) - 1);
+            milestone->location[sizeof(milestone->location) - 1] = '\0';
+        }
+    }
+    
+    milestone->timestamp = getCurrentTimeMs() / 1000;
+    milestone->active = true;
+    
+    gMilestonesIndex = (gMilestonesIndex + 1) % MAX_MILESTONES;
+    if (gMilestonesCount < MAX_MILESTONES) {
+        gMilestonesCount++;
+    }
+}
+
+// Write comprehensive character data for external website
+static void writeMemory() {
+    JsonWriter json;
+    json.startObject();
+    
+    json.addString("description", "AI decision memory - records actions, outcomes, and learned experiences");
+    json.addInt("total_memories", gMemoryCount);
+    
+    json.startArray("memories");
+    int startIdx = (gMemoryCount >= MAX_MEMORY_ENTRIES) ? gMemoryIndex : 0;
+    for (int i = 0; i < gMemoryCount && i < MAX_MEMORY_ENTRIES; i++) {
+        int idx = (startIdx + i) % MAX_MEMORY_ENTRIES;
+        if (gMemoryEntries[idx].active) {
+            json.addObjectInArray();
+            json.addString("map", gMemoryEntries[idx].mapName);
+            json.addInt("tile", gMemoryEntries[idx].tile);
+            json.addInt("elevation", gMemoryEntries[idx].elevation);
+            json.addString("action", gMemoryEntries[idx].action);
+            json.addString("target", gMemoryEntries[idx].target);
+            json.addString("result", gMemoryEntries[idx].result);
+            json.addInt("timestamp", gMemoryEntries[idx].timestamp);
+            json.endObjectInArray();
+        }
+    }
+    json.endArray();
+    
+    json.endObject();
+    
+    char tempPath[256];
+    snprintf(tempPath, sizeof(tempPath), "%s.tmp", kMemoryFilePath);
+    
+    FILE* fp = fopen(tempPath, "w");
+    if (fp) {
+        fwrite(json.c_str(), 1, json.length(), fp);
+        fclose(fp);
+        rename(tempPath, kMemoryFilePath);
+    }
+}
+
 // Write game knowledge base (written once at initialization)
 static void writeGameKnowledge() {
     if (gKnowledgeWritten) {
@@ -168,19 +341,29 @@ static void writeGameKnowledge() {
     JsonWriter json;
     json.startObject();
     
+    // Character/Roleplay Context - KEEP IN CHARACTER
+    json.addString("character_role", "Vault Dweller from Vault 13");
+    json.addString("character_background", "You are a resident of Vault 13, an underground shelter built before the nuclear war. Your home is running out of water due to a broken water purification chip. The Overseer has chosen you to venture into the dangerous wasteland to find a replacement chip. You have 150 days before the vault runs out of water. You are brave but inexperienced in the harsh realities of the post-apocalyptic world.");
+    json.addString("roleplay_guidelines", "Stay in character as the Vault Dweller. You're cautious but determined. You care about your vault's survival. You're unfamiliar with the wasteland initially but learn quickly. Speak in first person when describing actions. Show concern for survival (HP, resources). Be wary of strangers but willing to help good people. Your mission is urgent but you must survive to complete it.");
+    json.addString("character_motivation", "Primary: Find the water chip to save Vault 13. Secondary: Survive the wasteland, help innocents, stop threats to humanity.");
+    json.addString("speaking_style", "Practical and straightforward. Example: 'I need to find that water chip, but I should heal first - I'm badly injured.' or 'There's a hostile creature ahead. I'll need to fight or find another way around.'");
+    
     // Game overview
     json.addString("game_title", "Fallout 1");
     json.addString("genre", "Post-apocalyptic RPG");
-    json.addString("setting", "Post-nuclear war wasteland, year 2161");
+    json.addString("setting", "Post-nuclear war wasteland, Southern California, year 2161 (84 years after the bombs fell in 2077)");
+    json.addString("world_state", "Civilization destroyed by nuclear war. Survivors live in vaults, settlements, or as raiders. Mutated creatures roam the wastes. Technology is scarce and valuable. Water and food are precious. Violence is common. Some areas are irradiated.");
     
     // Core gameplay loop
     json.startArray("core_objectives");
     json.addObjectInArray();
     json.addString("objective", "Find water chip for Vault 13");
-    json.addString("time_limit", "150 days initially");
+    json.addString("time_limit", "150 days initially (can be extended)");
+    json.addString("urgency", "CRITICAL - Your vault will die without water");
     json.endObjectInArray();
     json.addObjectInArray();
-    json.addString("objective", "Defeat the Master and stop mutant army");
+    json.addString("objective", "Investigate the Master and Super Mutant army");
+    json.addString("discovery", "Later in game: Stop the Master's plan to convert humanity into Super Mutants");
     json.endObjectInArray();
     json.endArray();
     
@@ -201,7 +384,87 @@ static void writeGameKnowledge() {
     }
     json.endArray();
     
-    // Important item PIDs
+    // Detailed weapon database
+    json.startArray("weapons_database");
+    const char* weapons[][6] = {
+        // Name, Damage, Range, AP Cost, Ammo Type, Notes
+        {"Knife", "1-6", "1", "3", "None", "Starting melee weapon. Weak but no ammo needed."},
+        {"Spear", "3-10", "2", "4", "None", "Good early melee. Can be thrown."},
+        {"10mm Pistol", "5-12", "20", "5", "10mm", "Common early gun. Accurate, low damage."},
+        {"Desert Eagle", "10-16", "25", "5", ".44", "Powerful pistol. Good damage, rare ammo."},
+        {"Shotgun", "12-22", "14", "5", "12 gauge", "High damage, short range. Excellent vs unarmored."},
+        {"Hunting Rifle", "8-20", "40", "5", ".223", "Long range sniper. High accuracy."},
+        {"Assault Rifle", "8-16", "45", "5", "5mm", "Burst fire. Good all-around weapon."},
+        {"SMG", "5-12", "32", "4", "10mm", "Burst fire. High AP cost but many shots."},
+        {"Combat Shotgun", "15-25", "22", "5", "12 gauge", "Upgraded shotgun. Devastating close range."},
+        {"Laser Pistol", "10-22", "35", "5", "Energy cell", "Energy weapon. Good vs armor."},
+        {"Plasma Rifle", "30-65", "25", "5", "Microfusion", "Late game. Extremely powerful."},
+        {"Rocket Launcher", "35-100", "40", "6", "Rocket", "Explosive. Area damage. Very rare ammo."},
+        {"Minigun", "7-11", "35", "6", "5mm", "Burst fire. Shreds targets with many bullets."},
+        {"Turbo Plasma Rifle", "35-70", "30", "4", "Microfusion", "Best energy weapon. Fast and deadly."}
+    };
+    for (int i = 0; i < 14; i++) {
+        json.addObjectInArray();
+        json.addString("name", weapons[i][0]);
+        json.addString("damage", weapons[i][1]);
+        json.addString("range", weapons[i][2]);
+        json.addString("ap_cost", weapons[i][3]);
+        json.addString("ammo", weapons[i][4]);
+        json.addString("notes", weapons[i][5]);
+        json.endObjectInArray();
+    }
+    json.endArray();
+    
+    // Armor database
+    json.startArray("armor_database");
+    const char* armor[][4] = {
+        // Name, AC Bonus, Damage Resist, Notes
+        {"None", "0", "0%", "No protection. Very vulnerable."},
+        {"Leather Jacket", "8", "20%", "Basic early armor. Light protection."},
+        {"Leather Armor", "15", "25%", "Better leather. Decent early game."},
+        {"Metal Armor", "10", "30%", "Heavy but good protection. Slows movement."},
+        {"Tesla Armor", "15", "20% (80% vs energy)", "Specialized. Excellent vs energy weapons."},
+        {"Combat Armor", "20", "40%", "Military grade. Strong all-around protection."},
+        {"Power Armor", "25", "40%", "Best armor. +3 Strength. Rare. Quest reward."},
+        {"Hardened Power Armor", "30", "50%", "Upgraded power armor. Ultimate protection."}
+    };
+    for (int i = 0; i < 8; i++) {
+        json.addObjectInArray();
+        json.addString("name", armor[i][0]);
+        json.addString("ac_bonus", armor[i][1]);
+        json.addString("damage_resist", armor[i][2]);
+        json.addString("notes", armor[i][3]);
+        json.endObjectInArray();
+    }
+    json.endArray();
+    
+    // Enemy database with weaknesses
+    json.startArray("enemy_database");
+    const char* enemies[][5] = {
+        // Name, HP Range, Weakness, Strength, Strategy
+        {"Rat", "5-15", "Any weapon", "Fast, numerous", "Easy kills. Save ammo, use melee."},
+        {"Radscorpion", "20-40", "Energy weapons, eyes", "Poison tail, armor", "Aim for eyes. Avoid poison. Use ranged."},
+        {"Raider", "30-60", "Headshots, better gear", "Numbers, guns", "Use cover. Aim for head. Loot their weapons."},
+        {"Super Mutant", "80-140", "Plasma/energy, eyes", "High HP, strong weapons", "DANGEROUS. Use best weapons. Aim for eyes/head."},
+        {"Deathclaw", "200-300", "Eye shots, plasma", "Extreme damage, fast", "DEADLY. Run if possible. Plasma rifle to eyes only."},
+        {"Ghoul", "40-70", "Fire, headshots", "Radiation immune", "Use fire weapons or target head. Not all hostile."},
+        {"Centaur", "90-120", "Energy weapons", "Multiple attacks, tough", "Mutant creature. Use plasma or rockets."},
+        {"Floater", "40-80", "Energy/explosive", "Ranged acid", "Keep distance. Use grenades or energy weapons."},
+        {"Robot", "50-150", "Pulse/EMP, rockets", "Armor, sensors", "EMP weapons best. Explosives good. Lasers weak."},
+        {"Mutated Animals", "15-50", "Any weapons", "Speed, surprise", "Mantis, wild dogs. Moderate threat."}
+    };
+    for (int i = 0; i < 10; i++) {
+        json.addObjectInArray();
+        json.addString("enemy", enemies[i][0]);
+        json.addString("hp_range", enemies[i][1]);
+        json.addString("weakness", enemies[i][2]);
+        json.addString("strength", enemies[i][3]);
+        json.addString("combat_strategy", enemies[i][4]);
+        json.endObjectInArray();
+    }
+    json.endArray();
+    
+    // Important item PIDs with detailed stats
     json.startArray("common_items");
     const char* items[][3] = {
         {"40", "Stimpak", "Heals 15-20 HP. Essential for survival. Use when HP is low."},
@@ -217,6 +480,28 @@ static void writeGameKnowledge() {
         json.addString("pid", items[i][0]);
         json.addString("name", items[i][1]);
         json.addString("usage", items[i][2]);
+        json.endObjectInArray();
+    }
+    json.endArray();
+    
+    // Ammunition types
+    json.startArray("ammunition_types");
+    const char* ammo[][3] = {
+        {"10mm", "Common early game", "Used by 10mm Pistol, SMG. Widely available."},
+        {".44 Magnum", "Powerful pistol rounds", "Desert Eagle ammo. Good damage, less common."},
+        {"12 gauge", "Shotgun shells", "Devastating close range. Watch your stock."},
+        {".223 FMJ", "Rifle ammunition", "Hunting/Assault Rifle. Medium availability."},
+        {"5mm", "Minigun/Assault ammo", "Heavy use in auto weapons. Stock up."},
+        {"Small Energy Cell", "Energy weapon ammo", "Laser weapons. Scarce early, common late."},
+        {"Microfusion Cell", "Plasma weapon ammo", "Most powerful. Very rare. Don't waste."},
+        {"Rocket", "Explosive", "Extreme damage. Ultra rare. Boss fights only."},
+        {"Flamethrower Fuel", "Fire weapon", "Area damage. Rare. Good vs groups."}
+    };
+    for (int i = 0; i < 9; i++) {
+        json.addObjectInArray();
+        json.addString("ammo_type", ammo[i][0]);
+        json.addString("rarity", ammo[i][1]);
+        json.addString("notes", ammo[i][2]);
         json.endObjectInArray();
     }
     json.endArray();
@@ -811,6 +1096,7 @@ static void writeGameState() {
         char eventDesc[128];
         snprintf(eventDesc, sizeof(eventDesc), "Level up! Now level %d", currentLevel);
         addEvent("level_up", eventDesc);
+        addMilestone(eventDesc);
     }
     
     gLastHitPoints = currentHP;
@@ -1182,8 +1468,10 @@ static bool executeAction(const char* actionType, int targetTile, int targetPid)
                 if (result == 0) {
                     snprintf(gLastActionResult, sizeof(gLastActionResult), "success: moved to tile %d", targetTile);
                     addEvent("move", "Player moved");
+                    addMemory("move", "exploration", "Moved to new location");
                 } else {
                     snprintf(gLastActionResult, sizeof(gLastActionResult), "error: cannot move to tile %d", targetTile);
+                    addMemory("move", "blocked", "Path blocked or invalid tile");
                 }
             } else {
                 int distance = tile_dist(obj_dude->tile, targetTile);
@@ -1194,11 +1482,14 @@ static bool executeAction(const char* actionType, int targetTile, int targetPid)
                         obj_dude->data.critter.combat.ap -= apCost;
                         snprintf(gLastActionResult, sizeof(gLastActionResult), "success: moved to tile %d (-%d AP)", targetTile, apCost);
                         addEvent("move", "Player moved in combat");
+                        addMemory("move_combat", "tactical positioning", "Repositioned during combat");
                     } else {
                         snprintf(gLastActionResult, sizeof(gLastActionResult), "error: cannot move to tile %d", targetTile);
+                        addMemory("move_combat", "failed", "Could not reposition in combat");
                     }
                 } else {
                     snprintf(gLastActionResult, sizeof(gLastActionResult), "error: not enough AP");
+                    addMemory("move_combat", "insufficient AP", "Tried to move without enough action points");
                 }
             }
         } else {
@@ -1213,8 +1504,10 @@ static bool executeAction(const char* actionType, int targetTile, int targetPid)
             combat_turn_run();
             snprintf(gLastActionResult, sizeof(gLastActionResult), "success: turn ended");
             addEvent("wait", "Turn skipped");
+            addMemory("wait", "combat turn", "Ended combat turn");
         } else {
             snprintf(gLastActionResult, sizeof(gLastActionResult), "success: waited");
+            addMemory("wait", "non-combat", "Waited/passed time");
         }
         return true;
     }
@@ -1229,10 +1522,12 @@ static bool executeAction(const char* actionType, int targetTile, int targetPid)
                 char* itemName = object_name(invItem->item);
                 snprintf(gLastActionResult, sizeof(gLastActionResult), "success: used %s", itemName ? itemName : "item");
                 addEvent("use_item", gLastActionResult + 9); // Skip "success: "
+                addMemory("use_item", itemName ? itemName : "unknown item", gLastActionResult);
                 return true;
             }
         }
         snprintf(gLastActionResult, sizeof(gLastActionResult), "error: item %d not found in inventory", targetPid);
+        addMemory("use_item", "not found", gLastActionResult);
         return true;
     }
     
@@ -1247,8 +1542,16 @@ static bool executeAction(const char* actionType, int targetTile, int targetPid)
                     if (result == 0) {
                         snprintf(gLastActionResult, sizeof(gLastActionResult), "success: picked up %s", itemName ? itemName : "item");
                         addEvent("pickup", gLastActionResult + 9);
+                        addMemory("pickup", itemName ? itemName : "item", "Successfully added to inventory");
+                        // Track item collected
+                        addItemCollected(targetPid, itemName, 1);
+                        // Check for milestone items
+                        if (targetPid == 40) { // Stimpak
+                            addMilestone("Found first Stimpak - essential for survival");
+                        }
                     } else {
                         snprintf(gLastActionResult, sizeof(gLastActionResult), "error: cannot pickup item");
+                        addMemory("pickup", itemName ? itemName : "item", "Failed - inventory full or too heavy");
                     }
                     return true;
                 }
@@ -1256,6 +1559,7 @@ static bool executeAction(const char* actionType, int targetTile, int targetPid)
             obj = obj_find_next_at();
         }
         snprintf(gLastActionResult, sizeof(gLastActionResult), "error: item not found at tile %d", targetTile);
+        addMemory("pickup", "not found", gLastActionResult);
         return true;
     }
     
@@ -1276,13 +1580,20 @@ static bool executeAction(const char* actionType, int targetTile, int targetPid)
             combat_attack(obj_dude, target, HIT_MODE_LEFT_WEAPON_PRIMARY, HIT_LOCATION_TORSO);
             snprintf(gLastActionResult, sizeof(gLastActionResult), "success: attacked %s", targetName ? targetName : "target");
             addEvent("attack", gLastActionResult + 9);
-            gTotalDamageDealt++; // Simplified tracking
+            
+            char memoryResult[128];
             if (critter_is_dead(target)) {
+                snprintf(memoryResult, sizeof(memoryResult), "Killed %s - threat eliminated", targetName ? targetName : "enemy");
                 gTotalKills++;
+            } else {
+                snprintf(memoryResult, sizeof(memoryResult), "Attacked %s - still alive", targetName ? targetName : "enemy");
             }
+            addMemory("attack", targetName ? targetName : "enemy", memoryResult);
+            gTotalDamageDealt++; // Simplified tracking
             return true;
         } else {
             snprintf(gLastActionResult, sizeof(gLastActionResult), "error: no target at tile %d", targetTile);
+            addMemory("attack", "no target", "Attempted attack but no enemy present");
         }
         return true;
     }
@@ -1308,6 +1619,8 @@ void ai_control_api_init() {
         gEventCount = 0;
         gEventWriteIndex = 0;
         gKnowledgeWritten = false;
+        gMemoryCount = 0;
+        gMemoryIndex = 0;
         snprintf(gLastActionResult, sizeof(gLastActionResult), "none");
         
         // Clear events
@@ -1315,7 +1628,31 @@ void ai_control_api_init() {
             gRecentEvents[i][0] = '\0';
         }
         
+        // Clear memory
+        for (int i = 0; i < MAX_MEMORY_ENTRIES; i++) {
+            gMemoryEntries[i].active = false;
+            gMemoryEntries[i].mapName[0] = '\0';
+            gMemoryEntries[i].action[0] = '\0';
+            gMemoryEntries[i].target[0] = '\0';
+            gMemoryEntries[i].result[0] = '\0';
+        }
+        
+        // Clear items collected
+        for (int i = 0; i < MAX_ITEMS_COLLECTED; i++) {
+            gItemsCollected[i].active = false;
+            gItemsCollected[i].name[0] = '\0';
+            gItemsCollected[i].mapName[0] = '\0';
+        }
+        
+        // Clear milestones
+        for (int i = 0; i < MAX_MILESTONES; i++) {
+            gMilestones[i].active = false;
+            gMilestones[i].description[0] = '\0';
+            gMilestones[i].location[0] = '\0';
+        }
+        
         addEvent("system", "AI Control API initialized");
+        addMilestone("Journey begins - Vault Dweller leaves Vault 13");
         
         // Write game knowledge base for AI
         writeGameKnowledge();
@@ -1326,6 +1663,8 @@ void ai_control_api_init() {
 void ai_control_api_exit() {
     if (gAiControlApiEnabled) {
         addEvent("system", "AI Control API shutting down");
+        // Final memory write
+        writeMemory();
     }
     
     gAiControlApiEnabled = false;
@@ -1335,11 +1674,182 @@ void ai_control_api_exit() {
     remove(kStateFilePath);
     remove(kEventsFilePath);
     remove(kKnowledgeFilePath);
+    // Keep memory file for analysis
 }
 
 // Check if API is enabled
 bool ai_control_api_enabled() {
     return gAiControlApiEnabled;
+}
+
+// Export comprehensive character data for external website
+static void writeCharacterData() {
+    if (!obj_dude) return;
+    
+    JsonWriter json;
+    json.startObject();
+    
+    // Meta information
+    json.addString("data_type", "character_journey");
+    json.addString("game", "Fallout 1");
+    json.addInt("timestamp", getCurrentTimeMs() / 1000);
+    json.addInt("session_time_seconds", (getCurrentTimeMs() - gSessionStartTime) / 1000);
+    
+    // Character basic info
+    json.addInt("level", stat_pc_get(PC_STAT_LEVEL));
+    json.addInt("experience", stat_pc_get(PC_STAT_EXPERIENCE));
+    json.addInt("hit_points", critter_get_hits(obj_dude));
+    json.addInt("max_hit_points", stat_level(obj_dude, STAT_MAXIMUM_HIT_POINTS));
+    json.addInt("action_points", obj_dude->data.critter.combat.ap);
+    json.addInt("max_action_points", stat_level(obj_dude, STAT_MAXIMUM_ACTION_POINTS));
+    json.addInt("armor_class", stat_level(obj_dude, STAT_ARMOR_CLASS));
+    json.addInt("sequence", stat_level(obj_dude, STAT_SEQUENCE));
+    
+    // Location
+    int mapIndex = map_get_index_number();
+    if (mapIndex != -1) {
+        char* mapName = map_get_short_name(mapIndex);
+        if (mapName) {
+            json.addString("current_location", mapName);
+        }
+    }
+    json.addInt("player_tile", obj_dude->tile);
+    json.addInt("player_elevation", obj_dude->elevation);
+    
+    // Combat stats
+    json.addBool("in_combat", isInCombat());
+    json.addInt("total_kills", gTotalKills);
+    json.addInt("total_damage_dealt", gTotalDamageDealt);
+    
+    // SPECIAL attributes
+    json.startArray("special");
+    const char* specialNames[] = {"Strength", "Perception", "Endurance", "Charisma", "Intelligence", "Agility", "Luck"};
+    for (int i = 0; i < 7; i++) {
+        json.addObjectInArray();
+        json.addString("name", specialNames[i]);
+        json.addInt("value", stat_level(obj_dude, i));
+        json.endObjectInArray();
+    }
+    json.endArray();
+    
+    // Skills
+    json.startArray("skills");
+    const char* skillNames[] = {
+        "Small Guns", "Big Guns", "Energy Weapons", "Unarmed", "Melee Weapons",
+        "Throwing", "First Aid", "Doctor", "Sneak", "Lockpick", "Steal",
+        "Traps", "Science", "Repair", "Speech", "Barter", "Gambling", "Outdoorsman"
+    };
+    for (int i = 0; i < 18; i++) {
+        json.addObjectInArray();
+        json.addString("name", skillNames[i]);
+        json.addInt("value", skill_level(obj_dude, i));
+        json.endObjectInArray();
+    }
+    json.endArray();
+    
+    // Perks
+    json.startArray("perks");
+    int perks[128];
+    int perkCount = perk_make_list(perks);
+    for (int i = 0; i < perkCount && i < 20; i++) {
+        json.addObjectInArray();
+        json.addString("name", perk_name(perks[i]));
+        json.addInt("level", perk_level(perks[i]));
+        json.endObjectInArray();
+    }
+    json.endArray();
+    
+    // Current inventory
+    json.startArray("current_inventory");
+    Inventory* inventory = &(obj_dude->data.critter.inventory);
+    for (int i = 0; i < inventory->length && i < 50; i++) {
+        InventoryItem* item = &(inventory->items[i]);
+        if (item->item) {
+            json.addObjectInArray();
+            json.addInt("pid", item->item->pid);
+            json.addString("name", object_name(item->item));
+            json.addInt("quantity", item->quantity);
+            json.endObjectInArray();
+        }
+    }
+    json.endArray();
+    
+    // Items collected history
+    json.startArray("items_collected");
+    int startIdx = (gItemsCollectedCount >= MAX_ITEMS_COLLECTED) ? gItemsCollectedIndex : 0;
+    for (int i = 0; i < gItemsCollectedCount && i < MAX_ITEMS_COLLECTED; i++) {
+        int idx = (startIdx + i) % MAX_ITEMS_COLLECTED;
+        if (gItemsCollected[idx].active) {
+            json.addObjectInArray();
+            json.addInt("pid", gItemsCollected[idx].pid);
+            json.addString("name", gItemsCollected[idx].name);
+            json.addInt("quantity", gItemsCollected[idx].quantity);
+            json.addString("location", gItemsCollected[idx].mapName);
+            json.addInt("timestamp", gItemsCollected[idx].timestamp);
+            json.endObjectInArray();
+        }
+    }
+    json.endArray();
+    
+    // Journey memories
+    json.startArray("journey_memories");
+    startIdx = (gMemoryCount >= MAX_MEMORY_ENTRIES) ? gMemoryIndex : 0;
+    for (int i = 0; i < gMemoryCount && i < MAX_MEMORY_ENTRIES; i++) {
+        int idx = (startIdx + i) % MAX_MEMORY_ENTRIES;
+        if (gMemoryEntries[idx].active) {
+            json.addObjectInArray();
+            json.addString("map", gMemoryEntries[idx].mapName);
+            json.addInt("tile", gMemoryEntries[idx].tile);
+            json.addString("action", gMemoryEntries[idx].action);
+            json.addString("target", gMemoryEntries[idx].target);
+            json.addString("result", gMemoryEntries[idx].result);
+            json.addInt("timestamp", gMemoryEntries[idx].timestamp);
+            json.endObjectInArray();
+        }
+    }
+    json.endArray();
+    
+    // Milestones
+    json.startArray("milestones");
+    startIdx = (gMilestonesCount >= MAX_MILESTONES) ? gMilestonesIndex : 0;
+    for (int i = 0; i < gMilestonesCount && i < MAX_MILESTONES; i++) {
+        int idx = (startIdx + i) % MAX_MILESTONES;
+        if (gMilestones[idx].active) {
+            json.addObjectInArray();
+            json.addString("description", gMilestones[idx].description);
+            json.addString("location", gMilestones[idx].location);
+            json.addInt("timestamp", gMilestones[idx].timestamp);
+            json.endObjectInArray();
+        }
+    }
+    json.endArray();
+    
+    // Recent events
+    json.startArray("recent_events");
+    int eventsToShow = gEventCount < MAX_RECENT_EVENTS ? gEventCount : MAX_RECENT_EVENTS;
+    startIdx = gEventCount < MAX_RECENT_EVENTS ? 0 : gEventWriteIndex;
+    for (int i = 0; i < eventsToShow; i++) {
+        int idx = (startIdx + i) % MAX_RECENT_EVENTS;
+        if (gRecentEvents[idx][0] != '\0') {
+            json.addObjectInArray();
+            json.addString("event", gRecentEvents[idx]);
+            json.endObjectInArray();
+        }
+    }
+    json.endArray();
+    
+    json.endObject();
+    
+    // Write to file
+    char tempPath[256];
+    snprintf(tempPath, sizeof(tempPath), "character_data.json.tmp");
+    
+    FILE* fp = fopen(tempPath, "w");
+    if (fp) {
+        fwrite(json.c_str(), 1, json.length(), fp);
+        fclose(fp);
+        rename(tempPath, "character_data.json");
+    }
 }
 
 // Process one AI action and write state
@@ -1350,6 +1860,15 @@ bool ai_control_api_process() {
     
     // Always write current state
     writeGameState();
+    
+    // Write character data and memory periodically (every 10 frames to reduce overhead)
+    static int frameCount = 0;
+    frameCount++;
+    if (frameCount >= 10) {
+        writeMemory();
+        writeCharacterData(); // Export data for external website
+        frameCount = 0;
+    }
     
     // Check for action file
     char actionType[64] = {0};
