@@ -141,6 +141,15 @@ The game writes extensive state information every frame:
   "sequence": 8,
   "carry_weight": 175,
   "melee_damage": 2,
+  "healing_rate": 1,
+  "critical_chance": 5,
+  "damage_resistance": 0,
+  "radiation_resistance": 10,
+  "poison_resistance": 15,
+  "karma": 25,
+  "reputation": 50,
+  "age": 25,
+  "gender": 0,
   "in_combat": false,
   "strength": 5,
   "perception": 6,
@@ -172,6 +181,10 @@ The game writes extensive state information every frame:
   "perks": [
     {"name": "Bonus Move", "level": 1},
     {"name": "More Criticals", "level": 1}
+  ],
+  "traits": [
+    {"name": "Gifted", "description": "+1 to all SPECIAL, -10% to all skills"},
+    {"name": "Fast Shot", "description": "You can't use targeted shots, but gain +1 AP"}
   ],
   "map_name": "V13Ent",
   "nearby_objects": [
@@ -222,6 +235,27 @@ The game writes extensive state information every frame:
   ]
 }
 ```
+
+### New Fields Added (v2.1.0)
+
+**Derived Stats:**
+- `healing_rate` - HP restored per rest/sleep
+- `critical_chance` - Base critical hit chance percentage
+- `damage_resistance` - General damage reduction
+- `radiation_resistance` - Radiation damage reduction
+- `poison_resistance` - Poison damage reduction
+
+**Character Identity:**
+- `karma` - Moral alignment value (-100 to +100, negative=evil, positive=good)
+- `reputation` - Overall fame/recognition (-100 to +100)
+- `age` - Character age in years
+- `gender` - 0=male, 1=female
+
+**Traits:**
+- `traits[]` - Character traits selected at creation (up to 2)
+  - Each trait has `name` and `description`
+  - Traits provide permanent bonuses/penalties
+  - Examples: Gifted, Fast Shot, Bloody Mess, Kamikaze, etc.
 
 ### New: Real-Time AI Hints
 

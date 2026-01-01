@@ -1122,6 +1122,21 @@ static void writeGameState() {
     json.addInt("carry_weight", stat_level(obj_dude, STAT_CARRY_WEIGHT));
     json.addInt("melee_damage", stat_level(obj_dude, STAT_MELEE_DAMAGE));
     
+    // Additional derived stats
+    json.addInt("healing_rate", stat_level(obj_dude, STAT_HEALING_RATE));
+    json.addInt("critical_chance", stat_level(obj_dude, STAT_CRITICAL_CHANCE));
+    json.addInt("damage_resistance", stat_level(obj_dude, STAT_DAMAGE_RESISTANCE));
+    json.addInt("radiation_resistance", stat_level(obj_dude, STAT_RADIATION_RESISTANCE));
+    json.addInt("poison_resistance", stat_level(obj_dude, STAT_POISON_RESISTANCE));
+    
+    // Karma and reputation (PC-specific stats)
+    json.addInt("karma", stat_pc_get(PC_STAT_KARMA));
+    json.addInt("reputation", stat_pc_get(PC_STAT_REPUTATION));
+    
+    // Character identity
+    json.addInt("age", stat_level(obj_dude, STAT_AGE));
+    json.addInt("gender", stat_level(obj_dude, STAT_GENDER)); // 0=male, 1=female
+    
     // Combat state
     json.addBool("in_combat", isInCombat());
     
@@ -1157,6 +1172,26 @@ static void writeGameState() {
         json.addObjectInArray();
         json.addString("name", perk_name(perks[i]));
         json.addInt("level", perk_level(perks[i]));
+        json.endObjectInArray();
+    }
+    json.endArray();
+    
+    // Traits
+    json.startArray("traits");
+    int trait1, trait2;
+    trait_get(&trait1, &trait2);
+    
+    if (trait1 != -1) {
+        json.addObjectInArray();
+        json.addString("name", trait_name(trait1));
+        json.addString("description", trait_description(trait1));
+        json.endObjectInArray();
+    }
+    
+    if (trait2 != -1) {
+        json.addObjectInArray();
+        json.addString("name", trait_name(trait2));
+        json.addString("description", trait_description(trait2));
         json.endObjectInArray();
     }
     json.endArray();

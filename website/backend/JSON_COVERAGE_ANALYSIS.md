@@ -13,12 +13,17 @@
 - SPECIAL stats (Strength, Perception, Endurance, Charisma, Intelligence, Agility, Luck)
 - Skills (all 18 with values)
 - Perks (name, level/rank)
+- **Traits** (name, description) - **NEW in v2.1.0**
 - Inventory (items with PID, name, quantity)
 - Map name (current location)
 - Combat status (in_combat flag)
 - Session time, total kills, total damage
 - Recent events (last 50)
 - Nearby objects/NPCs
+- **Karma** - **NEW in v2.1.0**
+- **Reputation** - **NEW in v2.1.0**
+- **Age and Gender** - **NEW in v2.1.0**
+- **Additional derived stats** (healing_rate, critical_chance, damage_resistance, radiation_resistance, poison_resistance) - **NEW in v2.1.0**
 
 ### ai_memory.json (Persistent Decision Log)
 ✅ **Available:**
@@ -40,7 +45,9 @@
 
 1. **Character Identity**
    - ❌ Name - NOT in game JSON (we generate default "Vault Dweller")
-   - ❌ Age, Pronouns - NOT in game JSON (we use defaults: 28, "they/them")
+   - ✅ **Age** - **Now in game JSON** (v2.1.0)
+   - ✅ **Gender** - **Now in game JSON** (v2.1.0)
+   - ❌ Pronouns - NOT in game JSON (we use defaults: "they/them")
    - ✅ Origin - Can infer from starting location
    - ❌ Tagline - NOT in game JSON (we generate from quest context)
 
@@ -49,8 +56,8 @@
    - ✅ SPECIAL - Direct from `ai_state.json`
    - ✅ Skills - Direct from `ai_state.json`
    - ✅ Perks - Direct from `ai_state.json`
-   - ❌ Traits - NOT in game JSON (character creation choice, not exported)
-   - ✅ Derived stats (healing rate, crit chance) - Can calculate from SPECIAL
+   - ✅ **Traits** - **Now in game JSON** (v2.1.0)
+   - ✅ **Derived stats** (healing rate, crit chance) - **Now in game JSON** (v2.1.0)
 
 3. **Inventory**
    - ✅ All items with PID, name, quantity - Direct from `ai_state.json`
@@ -128,13 +135,17 @@ The backend generator **bridges the gap** by:
 | HP/Stats/Skills | ✅ Complete | - | Ready |
 | SPECIAL | ✅ Complete | - | Ready |
 | Perks | ✅ Complete | Descriptions | Enhanced |
+| **Traits** | ✅ **Complete (v2.1.0)** | - | **Ready** |
+| **Karma** | ✅ **Complete (v2.1.0)** | - | **Ready** |
+| **Reputation** | ✅ **Complete (v2.1.0)** | - | **Ready** |
+| **Derived Stats** | ✅ **Complete (v2.1.0)** | - | **Ready** |
 | Inventory | ✅ Complete | Equipped slots, notes | Enhanced |
 | Current Location | ✅ Complete | - | Ready |
 | Visited Locations | ⚠️ In memory | Extracts + coordinates | Generated |
 | Timeline | ⚠️ Raw events | Types, links, structure | Generated |
 | Quests | ❌ Not tracked | Full quest log | Generated |
 | Journal | ❌ Not present | Narrative entries | Generated |
-| Reputation | ❌ Not present | Karma + factions | Generated |
+| Faction Reputation | ❌ Not present | Per-town standings | Generated |
 | Map Visualization | ❌ Not present | Coordinates, routes | Generated |
 
 ## Recommendation: Extend Game Exports
