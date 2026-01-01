@@ -130,3 +130,131 @@ Tables:
 - `stats` - SPECIAL stats
 - `session_stats` - Session statistics
 - `items_collected` - Item collection history
+
+## Fallout Wiki Integration (NEW)
+
+### Overview
+
+The backend now includes a comprehensive **Fallout Wiki scraper** that fetches and caches data from fallout.fandom.com with strict **Fallout 1 (1997) canon boundaries**.
+
+### Features
+
+- **Automatic caching** (30-day duration)
+- **Lore filtering** - Excludes F2/F3/FNV/F4/F76 content
+- **Categories**: Locations, quests, characters, factions, items, creatures
+- **Smart API usage** - Rate limiting and caching
+- **Disk-based storage** - Survives server restarts
+
+### Quick Start
+
+Fetch all Fallout 1 wiki data:
+```bash
+python fallout_wiki_scraper.py --fetch-all
+```
+
+View cache stats:
+```bash
+python fallout_wiki_scraper.py --stats
+```
+
+Search wiki:
+```bash
+python fallout_wiki_scraper.py --search "water chip"
+```
+
+### Wiki API Endpoints
+
+The API server now exposes wiki data:
+
+- `GET /api/wiki/page/<page_title>` - Fetch specific wiki page
+- `GET /api/wiki/search?q=<query>` - Search Fallout wiki (F1 only)
+- `GET /api/wiki/stats` - Cache statistics
+
+### Lore Policy
+
+**Strict Fallout 1 Canon Only**
+
+✅ **Included:**
+- Fallout 1 (1997) content
+- Timeline: 2161-2162
+- California wasteland locations
+- Black Isle/Interplay era lore
+
+❌ **Excluded:**
+- Fallout 2, 3, New Vegas, 4, 76 content
+- Post-2162 timeline events
+- Bethesda/Obsidian retcons
+- East Coast locations
+
+See **`LORE_POLICY.md`** for complete policy.
+
+### Usage
+
+```python
+from fallout_wiki_scraper import FalloutWikiScraper
+
+scraper = FalloutWikiScraper()
+
+# Fetch page
+page = scraper.fetch_page("Vault_13")
+print(page['title'])
+print(page['extract'])
+
+# Fetch category
+locations = scraper.fetch_category_pages("Fallout_locations", limit=50)
+
+# Search
+results = scraper.search_wiki("Ian companion")
+
+# Stats
+stats = scraper.get_cache_stats()
+print(f"Cached: {stats['cached_pages']} pages, {stats['total_size_mb']} MB")
+```
+
+### Integration with Quest Database
+
+Quest database is now enhanced with wiki integration:
+
+```python
+from quest_database import get_quest_info
+
+quest = get_quest_info("GVAR_RESCUE_TANDI", 2)
+
+# Includes wiki metadata:
+# - name: "Rescue Tandi from the Raiders"
+# - description: Full wiki description
+# - objectives: Step-by-step goals
+# - wiki_url: Direct link to guide
+```
+
+### Documentation
+
+- **WIKI_INTEGRATION.md** - Complete wiki scraper guide
+- **LORE_POLICY.md** - Canon boundaries and filtering rules
+- **QUEST_DATABASE.md** - Quest wiki integration
+
+### Cache Management
+
+Cache location: `wiki_cache/`
+
+Clear cache:
+```bash
+python fallout_wiki_scraper.py --clear
+```
+
+Force refresh:
+```bash
+python fallout_wiki_scraper.py --fetch-all --refresh
+```
+
+### Performance
+
+- **First fetch**: ~3-5 minutes (200+ pages)
+- **Cached requests**: <100ms
+- **Cache size**: ~10-50 MB
+- **Cache expiry**: 30 days
+
+### Dependencies
+
+Added to `requirements.txt`:
+- `requests>=2.31.0` (for wiki API calls)
