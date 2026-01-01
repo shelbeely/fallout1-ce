@@ -240,10 +240,19 @@ struct LocationVisit {
 5. ✅ Character name (object_name(obj_dude))
 6. ✅ Equipped items (inven_right_hand(), inven_left_hand(), inven_worn())
 
-### Phase 3: Advanced Features (4-8 hours) - FUTURE
-7. ❌ Town reputation (need to locate reputation system)
-8. ❌ Quest tracking (complex, may require script integration)
-9. ❌ Location visit tracking (new system to build)
+### Phase 3: Quest & Reputation Tracking (3-4 hours) ✅ COMPLETED
+7. ✅ Quest tracking (27 major quests via game_get_global_var())
+   - Main story: water chip, destroy vats, destroy master
+   - Major side quests: rescue Tandi, kill deathclaw, Brotherhood initiate, etc.
+8. ✅ Town reputation (hostile status for 12 factions via GVAR_ENEMY_*)
+9. ✅ Location discovery (known/visited status for 12+ major locations)
+10. ✅ Player worldmap location ID (GVAR_PLAYER_LOCATION)
+
+### Phase 4: Advanced Features (6-10 hours) - FUTURE
+11. ❌ Individual quest names/descriptions (requires string table lookup)
+12. ❌ Quest outcomes/rewards (complex, requires interpretation of GVAR patterns)
+13. ❌ Visit timestamps (would require new tracking system)
+14. ❌ Detailed faction standings beyond hostile/neutral (may not exist in game)
 
 ## Testing Plan
 
@@ -295,7 +304,12 @@ After implementation:
 ✅ Traits appear in `ai_state.json`
 ✅ Character name appears in `ai_state.json`
 ✅ Equipped items (right_hand, left_hand, armor) appear in `ai_state.json`
-✅ Frontend displays reputation without backend generation
+✅ 27 major quest GVARs exported in `quests` object
+✅ 12 faction hostile statuses exported in `town_reputation` object
+✅ 12+ location discovery statuses exported in `locations_known` object
+✅ Player worldmap location ID exported
+✅ Frontend displays quest progress from game data
+✅ Frontend displays faction relationships without backend inference
 ✅ ID card shows correct karma from game
 ✅ No frontend errors with new fields
 ✅ Backend generator uses direct fields when available

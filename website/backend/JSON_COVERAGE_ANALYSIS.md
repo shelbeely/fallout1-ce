@@ -64,6 +64,23 @@
    - ✅ **Equipped items** (weapon/armor slots) - **Now in game JSON** (v2.1.0)
    - ❌ Notable items with flavor text - NOT in game JSON
 
+4. **Karma & Reputation**
+   - ✅ **Karma** - **Now in game JSON** (v2.1.0)
+   - ✅ **Reputation** (overall) - **Now in game JSON** (v2.1.0)
+   - ✅ **Town reputation** (per-faction hostile status) - **Now in game JSON** (v2.2.0)
+
+5. **Quest Tracking**
+   - ✅ **27 major quests** - **Now in game JSON** (v2.2.0) via global variables
+   - ✅ **Quest progress values** - Direct from GVARs
+   - ❌ Quest names/descriptions - NOT in game JSON (we add from lookup table)
+   - ❌ Quest outcomes/consequences - NOT in game JSON (we infer from values)
+
+6. **Location Discovery**
+   - ✅ **12+ major locations known/visited status** - **Now in game JSON** (v2.2.0)
+   - ✅ **Current player location ID** - **Now in game JSON** (v2.2.0)
+   - ❌ Location coordinates - NOT in game JSON (we use hardcoded map)
+   - ❌ Visit timestamps - NOT in game JSON (could track via memory)
+
 ### ⚠️ Partially Covered (Requires Processing)
 
 4. **Map & Locations**
@@ -141,13 +158,15 @@ The backend generator **bridges the gap** by:
 | **Derived Stats** | ✅ **Complete (v2.1.0)** | - | **Ready** |
 | **Character Name** | ✅ **Complete (v2.1.0)** | Fallback if empty | **Ready** |
 | **Equipped Items** | ✅ **Complete (v2.1.0)** | Flavor notes | **Ready** |
+| **Quest Tracking** | ✅ **Complete (v2.2.0)** | Names, descriptions | **Ready** |
+| **Town Reputation** | ✅ **Complete (v2.2.0)** | Friendly names | **Ready** |
+| **Locations Known** | ✅ **Complete (v2.2.0)** | Coordinates, names | **Ready** |
 | Inventory | ✅ Complete | Notable item notes | Enhanced |
 | Current Location | ✅ Complete | - | Ready |
 | Visited Locations | ⚠️ In memory | Extracts + coordinates | Generated |
 | Timeline | ⚠️ Raw events | Types, links, structure | Generated |
-| Quests | ❌ Not tracked | Full quest log | Generated |
+| Quest Details | ⚠️ GVARs only | Full quest log with outcomes | Generated |
 | Journal | ❌ Not present | Narrative entries | Generated |
-| Faction Reputation | ❌ Not present | Per-town standings | Generated |
 | Map Visualization | ❌ Not present | Coordinates, routes | Generated |
 
 ## Recommendation: Extend Game Exports
