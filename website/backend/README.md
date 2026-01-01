@@ -1,12 +1,13 @@
 # Website Backend README
 
-## Data Collector + API Server + Extended Data Generator
+## Data Collector + API Server + Extended Data Generator + Quest Database
 
-The website backend consists of three components:
+The website backend consists of four components:
 
 1. **Data Collector** (`data_collector.py`) - Background service that polls game JSON files
 2. **API Server** (`api_server.py`) - REST API that serves data to frontend
 3. **Extended Data Generator** (`character_data_generator.py`) - Generates comprehensive character data for terminal UI
+4. **Quest Database** (`quest_database.py`) - Maps quest GVARs to wiki names, descriptions, and objectives
 
 ## Installation
 
@@ -72,11 +73,48 @@ python character_data_generator.py --game-dir ../.. --output ../../character_ext
 
 This reads base game data (`ai_state.json`, `ai_memory.json`, etc.) and generates:
 - Timeline from memory events
-- Quest log from actions
+- Quest log from quest GVARs + quest database (wiki names/descriptions)
 - Location tracking from visited maps
 - Journal entries based on progression
 
 The API server automatically generates this data when requested, with 10-second caching.
+
+## Quest Database
+
+The `quest_database.py` module maps quest GVAR values (exported by game) to rich quest information:
+
+**Source:** Fallout Wiki (https://fallout.fandom.com/wiki/Fallout_quests)
+
+**Coverage:** 27 major quests including:
+- Main quest line (water chip, destroy vats, defeat master)
+- Major side quests (rescue Tandi, Brotherhood initiation, kill deathclaw)
+- Critical timers (water supply countdown, vault discovery)
+
+**Features:**
+- Quest names from wiki
+- Detailed descriptions and objectives
+- Status interpretation (GVAR value → active/completed/failed)
+- Linked locations
+- Rewards and outcomes
+- Direct wiki links for full guides
+
+**Usage:**
+```python
+from quest_database import get_all_quests
+
+quest_gvars = {"GVAR_RESCUE_TANDI": 2, "GVAR_FIND_WATER_CHIP": 1}
+quests = get_all_quests(quest_gvars)
+
+# Returns organized quest log with wiki information
+# {
+#   "active": [...],
+#   "completed": [...],
+#   "failed": [...],
+#   "timers": [...]
+# }
+```
+
+See `QUEST_DATABASE.md` for complete documentation.
 
 ## Database
 

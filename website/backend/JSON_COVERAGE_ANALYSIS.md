@@ -72,8 +72,11 @@
 5. **Quest Tracking**
    - ✅ **27 major quests** - **Now in game JSON** (v2.2.0) via global variables
    - ✅ **Quest progress values** - Direct from GVARs
-   - ❌ Quest names/descriptions - NOT in game JSON (we add from lookup table)
-   - ❌ Quest outcomes/consequences - NOT in game JSON (we infer from values)
+   - ✅ **Quest names/descriptions** - **Added via quest_database.py** (sourced from Fallout wiki)
+   - ✅ **Quest outcomes/consequences** - **Interpreted from GVAR values** via quest database
+   - ✅ **Quest objectives** - Provided by quest database
+   - ✅ **Quest rewards** - Provided by quest database
+   - ✅ **Wiki links** - Each quest links to full Fallout wiki guide
 
 6. **Location Discovery**
    - ✅ **12+ major locations known/visited status** - **Now in game JSON** (v2.2.0)

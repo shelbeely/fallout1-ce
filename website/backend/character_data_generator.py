@@ -10,6 +10,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Any
 
+# Import quest database for wiki-based quest information
+from quest_database import (
+    get_all_quests,
+    get_quest_highlights,
+    QUEST_CATEGORIES
+)
+
 class CharacterDataGenerator:
     """Generates extended character data for frontend"""
     
@@ -259,38 +266,93 @@ class CharacterDataGenerator:
         return notes.get(pid, "Useful item")
     
     def _generate_quests(self, base_data: Dict) -> List[Dict]:
-        """Generate quest log from memories and state"""
-        quests = []
+        """Generate quest log from game state using quest database"""
+        state = base_data.get('state', {})
         
-        # Main quest (always active at start)
-        quests.append({
-            "id": "waterchip",
-            "name": "Find the Water Chip",
-            "status": "active",
-            "highlight": True,
-            "description": "The vault water chip is broken. Find a replacement within 150 days.",
-            "linkedLocations": ["vault13"]
-        })
+        # Get quest GVARs from game export (v2.2.0+)
+        quest_gvars = state.get('quests', {})
         
-        # Parse memories for quest-related events
-        memories = base_data.get('memory', {}).get('memories', [])
-        for memory in memories:
-            action = memory.get('action', '')
-            result = memory.get('result', '')
-            
-            # Detect quest completions from memory
-            if 'rescued' in result.lower() or 'saved' in result.lower():
-                quests.append({
-                    "id": f"quest_{len(quests)}",
-                    "name": "Rescue Mission",
-                    "status": "completed",
-                    "highlight": False,
-                    "description": result,
-                    "outcome": "Success",
-                    "linkedLocations": [memory.get('map', 'unknown')]
-                })
+        # If no quest data from game, return minimal fallback
+        if not quest_gvars:
+            return [{
+                "id": "waterchip",
+                "name": "Find the Water Chip",
+                "status": "active",
+                "category": "main_quest",
+                "highlight": True,
+                "description": "The vault water chip is broken. Find a replacement.",
+                "linkedLocations": ["vault13"],
+                "source": "fallback"
+            }]
         
-        return quests
+        # Use quest database to get full quest information
+        all_quests = get_all_quests(quest_gvars)
+        
+        # Flatten and format for frontend
+        quest_list = []
+        
+        # Add timers first (always prominent)
+        for quest in all_quests.get('timers', []):
+            quest_list.append(self._format_quest_for_frontend(quest))
+        
+        # Add active quests
+        for quest in all_quests.get('active', []):
+            quest_list.append(self._format_quest_for_frontend(quest))
+        
+        # Add completed quests
+        for quest in all_quests.get('completed', []):
+            quest_list.append(self._format_quest_for_frontend(quest))
+        
+        # Add failed quests
+        for quest in all_quests.get('failed', []):
+            quest_list.append(self._format_quest_for_frontend(quest))
+        
+        return quest_list
+    
+    def _format_quest_for_frontend(self, quest: Dict) -> Dict:
+        """Format quest data for frontend consumption"""
+        formatted = {
+            "id": quest.get('id'),
+            "name": quest.get('name'),
+            "status": quest.get('status'),
+            "category": QUEST_CATEGORIES.get(quest.get('category', 'side_quest'), 'Side Quest'),
+            "description": quest.get('description', ''),
+            "linkedLocations": quest.get('linked_locations', []),
+            "source": "wiki"
+        }
+        
+        # Add progress if available
+        if quest.get('progress') is not None:
+            formatted['progress'] = quest['progress']
+        
+        # Add outcome for completed/failed quests
+        if quest.get('outcome'):
+            formatted['outcome'] = quest['outcome']
+        
+        # Add objectives if available
+        if quest.get('objectives'):
+            formatted['objectives'] = quest['objectives']
+        
+        # Add rewards if available
+        if quest.get('rewards'):
+            formatted['rewards'] = quest['rewards']
+        
+        # Add wiki URL for reference
+        if quest.get('wiki_url'):
+            formatted['wiki_url'] = quest['wiki_url']
+        
+        # Special handling for timer quests
+        if quest.get('days_remaining') is not None:
+            formatted['days_remaining'] = quest['days_remaining']
+            formatted['highlight'] = True
+        
+        # Highlight main quests
+        if quest.get('category') == 'main_quest':
+            formatted['highlight'] = True
+        else:
+            formatted['highlight'] = False
+        
+        return formatted
     
     def _generate_journal(self, base_data: Dict) -> List[Dict]:
         """Generate journal entries from session"""
@@ -435,17 +497,38 @@ class CharacterDataGenerator:
         return {"entries": entries}
     
     def _generate_highlights(self, state: Dict) -> List[str]:
-        """Generate stream highlights"""
+        """Generate stream highlights using quest database"""
         highlights = []
         
+        # Character level and location
         highlights.append(f"Level {state.get('level', 1)} Vault Dweller")
         highlights.append(f"Currently at {state.get('map_name', 'Unknown')}")
+        
+        # Get quest highlights from quest database
+        quest_gvars = state.get('quests', {})
+        if quest_gvars:
+            from quest_database import get_quest_highlights
+            important_quests = get_quest_highlights(quest_gvars)
+            
+            # Add top active quest
+            if important_quests:
+                top_quest = important_quests[0]
+                if top_quest.get('status') == 'timer':
+                    highlights.append(f"{top_quest['name']}: {top_quest.get('days_remaining', '?')} days")
+                else:
+                    highlights.append(f"Active: {top_quest['name']}")
+        else:
+            # Fallback if no quest data
+            highlights.append("Quest: Find the Water Chip")
+        
+        # HP status
         highlights.append(f"HP: {state.get('hit_points', 0)}/{state.get('max_hit_points', 0)}")
         
+        # Combat stats if available
         if state.get('total_kills', 0) > 0:
             highlights.append(f"Total Kills: {state['total_kills']}")
         
-        return highlights
+        return highlights[:5]  # Limit to 5 for stream readability
     
     def save_extended_data(self, output_path: str = None):
         """Generate and save extended character data"""
