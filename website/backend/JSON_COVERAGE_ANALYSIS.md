@@ -44,7 +44,7 @@
 ### ✅ Fully Covered by Base Game JSON
 
 1. **Character Identity**
-   - ❌ Name - NOT in game JSON (we generate default "Vault Dweller")
+   - ✅ **Name** - **Now in game JSON** (v2.1.0) - from character creation
    - ✅ **Age** - **Now in game JSON** (v2.1.0)
    - ✅ **Gender** - **Now in game JSON** (v2.1.0)
    - ❌ Pronouns - NOT in game JSON (we use defaults: "they/them")
@@ -61,7 +61,7 @@
 
 3. **Inventory**
    - ✅ All items with PID, name, quantity - Direct from `ai_state.json`
-   - ❌ Equipped items (weapon/armor slots) - NOT explicitly marked
+   - ✅ **Equipped items** (weapon/armor slots) - **Now in game JSON** (v2.1.0)
    - ❌ Notable items with flavor text - NOT in game JSON
 
 ### ⚠️ Partially Covered (Requires Processing)
@@ -139,7 +139,9 @@ The backend generator **bridges the gap** by:
 | **Karma** | ✅ **Complete (v2.1.0)** | - | **Ready** |
 | **Reputation** | ✅ **Complete (v2.1.0)** | - | **Ready** |
 | **Derived Stats** | ✅ **Complete (v2.1.0)** | - | **Ready** |
-| Inventory | ✅ Complete | Equipped slots, notes | Enhanced |
+| **Character Name** | ✅ **Complete (v2.1.0)** | Fallback if empty | **Ready** |
+| **Equipped Items** | ✅ **Complete (v2.1.0)** | Flavor notes | **Ready** |
+| Inventory | ✅ Complete | Notable item notes | Enhanced |
 | Current Location | ✅ Complete | - | Ready |
 | Visited Locations | ⚠️ In memory | Extracts + coordinates | Generated |
 | Timeline | ⚠️ Raw events | Types, links, structure | Generated |

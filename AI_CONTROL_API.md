@@ -150,6 +150,7 @@ The game writes extensive state information every frame:
   "reputation": 50,
   "age": 25,
   "gender": 0,
+  "character_name": "Jack Morrison",
   "in_combat": false,
   "strength": 5,
   "perception": 6,
@@ -210,6 +211,16 @@ The game writes extensive state information every frame:
       "name": "Stimpak"
     }
   ],
+  "equipped": {
+    "right_hand": {
+      "pid": 7,
+      "name": "Spear"
+    },
+    "armor": {
+      "pid": 74,
+      "name": "Leather Jacket"
+    }
+  },
   "total_damage_dealt": 145,
   "total_kills": 3,
   "session_time_seconds": 1234,
@@ -236,7 +247,7 @@ The game writes extensive state information every frame:
 }
 ```
 
-### New Fields Added (v2.1.0)
+**New Fields Added (v2.1.0)**
 
 **Derived Stats:**
 - `healing_rate` - HP restored per rest/sleep
@@ -250,12 +261,19 @@ The game writes extensive state information every frame:
 - `reputation` - Overall fame/recognition (-100 to +100)
 - `age` - Character age in years
 - `gender` - 0=male, 1=female
+- `character_name` - Player character name (from character creation)
 
 **Traits:**
 - `traits[]` - Character traits selected at creation (up to 2)
   - Each trait has `name` and `description`
   - Traits provide permanent bonuses/penalties
   - Examples: Gifted, Fast Shot, Bloody Mess, Kamikaze, etc.
+
+**Equipped Items:**
+- `equipped` - Object with currently equipped items
+  - `right_hand` - Weapon/item in right hand slot (pid, name)
+  - `left_hand` - Weapon/item in left hand slot (pid, name)
+  - `armor` - Currently worn armor (pid, name)
 
 ### New: Real-Time AI Hints
 

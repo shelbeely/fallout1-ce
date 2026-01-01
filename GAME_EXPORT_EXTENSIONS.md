@@ -230,17 +230,17 @@ struct LocationVisit {
 
 ## Implementation Priority
 
-### Phase 1: Quick Wins (1-2 hours)
+### Phase 1: Quick Wins (1-2 hours) ✅ COMPLETED
 1. ✅ Karma and reputation (PC_STAT_KARMA, PC_STAT_REPUTATION)
 2. ✅ Character traits (trait_get(), trait_name(), trait_description())
 3. ✅ Age and gender (STAT_AGE, STAT_GENDER)
 4. ✅ Additional derived stats (healing_rate, critical_chance, etc.)
 
-### Phase 2: Character Identity (2-3 hours)
-5. ⚠️ Character name (need to locate character creation code)
-6. ⚠️ Equipped items (need to verify inventory functions)
+### Phase 2: Character Identity (2-3 hours) ✅ COMPLETED
+5. ✅ Character name (object_name(obj_dude))
+6. ✅ Equipped items (inven_right_hand(), inven_left_hand(), inven_worn())
 
-### Phase 3: Advanced Features (4-8 hours)
+### Phase 3: Advanced Features (4-8 hours) - FUTURE
 7. ❌ Town reputation (need to locate reputation system)
 8. ❌ Quest tracking (complex, may require script integration)
 9. ❌ Location visit tracking (new system to build)
@@ -293,6 +293,8 @@ After implementation:
 
 ✅ Karma and reputation appear in `ai_state.json`
 ✅ Traits appear in `ai_state.json`
+✅ Character name appears in `ai_state.json`
+✅ Equipped items (right_hand, left_hand, armor) appear in `ai_state.json`
 ✅ Frontend displays reputation without backend generation
 ✅ ID card shows correct karma from game
 ✅ No frontend errors with new fields

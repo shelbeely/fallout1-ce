@@ -9,6 +9,7 @@
 #include "game/critter.h"
 #include "game/game.h"
 #include "game/gconfig.h"
+#include "game/inventry.h"
 #include "game/item.h"
 #include "game/map.h"
 #include "game/object.h"
@@ -17,6 +18,7 @@
 #include "game/skill.h"
 #include "game/stat.h"
 #include "game/tile.h"
+#include "game/trait.h"
 
 namespace fallout {
 
@@ -1137,6 +1139,12 @@ static void writeGameState() {
     json.addInt("age", stat_level(obj_dude, STAT_AGE));
     json.addInt("gender", stat_level(obj_dude, STAT_GENDER)); // 0=male, 1=female
     
+    // Character name
+    char* playerName = object_name(obj_dude);
+    if (playerName && strlen(playerName) > 0) {
+        json.addString("character_name", playerName);
+    }
+    
     // Combat state
     json.addBool("in_combat", isInCombat());
     
@@ -1263,6 +1271,44 @@ static void writeGameState() {
         }
     }
     json.endArray();
+    
+    // Equipped items
+    json.startObject("equipped");
+    
+    Object* rightHand = inven_right_hand(obj_dude);
+    if (rightHand) {
+        json.startObject("right_hand");
+        json.addInt("pid", rightHand->pid);
+        char* rightName = object_name(rightHand);
+        if (rightName) {
+            json.addString("name", rightName);
+        }
+        json.endObject();
+    }
+    
+    Object* leftHand = inven_left_hand(obj_dude);
+    if (leftHand) {
+        json.startObject("left_hand");
+        json.addInt("pid", leftHand->pid);
+        char* leftName = object_name(leftHand);
+        if (leftName) {
+            json.addString("name", leftName);
+        }
+        json.endObject();
+    }
+    
+    Object* armor = inven_worn(obj_dude);
+    if (armor) {
+        json.startObject("armor");
+        json.addInt("pid", armor->pid);
+        char* armorName = object_name(armor);
+        if (armorName) {
+            json.addString("name", armorName);
+        }
+        json.endObject();
+    }
+    
+    json.endObject(); // equipped
     
     // Streaming stats
     json.addInt("total_damage_dealt", gTotalDamageDealt);
