@@ -391,3 +391,5 @@ FodyWeavers.xsd
 # CMake
 /out
 /build
+website/frontend/node_modules/
+website/frontend/dist/
