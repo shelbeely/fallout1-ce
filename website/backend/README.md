@@ -1,13 +1,14 @@
 # Website Backend README
 
-## Data Collector + API Server + Extended Data Generator + Quest Database
+## Data Collector + API Server + Extended Data Generator + Quest Database + Wiki Scraper
 
-The website backend consists of four components:
+The website backend consists of five components:
 
 1. **Data Collector** (`data_collector.py`) - Background service that polls game JSON files
 2. **API Server** (`api_server.py`) - REST API that serves data to frontend
 3. **Extended Data Generator** (`character_data_generator.py`) - Generates comprehensive character data for terminal UI
 4. **Quest Database** (`quest_database.py`) - Maps quest GVARs to wiki names, descriptions, and objectives
+5. **Wiki Scraper** (`fallout_wiki_scraper.py`) - Fetches and caches Fallout 1 wiki data with strict lore boundaries
 
 ## Installation
 
@@ -47,6 +48,10 @@ python api_server.py --port 5000
 - `GET /api/quests` - Quest log with status and outcomes
 - `GET /api/locations-extended` - Detailed location dossiers and map data
 - `GET /api/journal` - In-character journal entries
+
+### Wiki Endpoints (Fallout 1 lore integration)
+- `GET /api/wiki/search?q=<query>` - Search wiki for Fallout 1 content
+- `GET /api/wiki/page/<title>` - Fetch specific wiki page data
 
 ### Extended Data Features
 
@@ -226,6 +231,57 @@ quest = get_quest_info("GVAR_RESCUE_TANDI", 2)
 # - objectives: Step-by-step goals
 # - wiki_url: Direct link to guide
 ```
+
+### Automated Wiki Scraping (GitHub Actions)
+
+A **GitHub Actions workflow** is included to automate wiki scraping:
+
+**Workflow:** `.github/workflows/wiki-scraper.yml`
+
+**Triggers:**
+- **Weekly** - Every Monday at 00:00 UTC (keeps cache fresh)
+- **Manual** - Via GitHub Actions "Run workflow" button
+- **Push** - When scraper code is modified
+
+**What it does:**
+1. Fetches all Fallout 1 wiki data
+2. Shows cache statistics
+3. Uploads cache as artifact (30-day retention)
+4. Optionally commits cache to repository
+
+**Manual trigger:**
+1. Go to Actions tab in GitHub
+2. Select "Fallout Wiki Scraper" workflow
+3. Click "Run workflow"
+4. Wait ~5 minutes for completion
+5. Download cache artifact or check commit
+
+**Local scraping:**
+```bash
+# Fetch all data
+python fallout_wiki_scraper.py --fetch-all
+
+# Force refresh even if cache exists
+python fallout_wiki_scraper.py --fetch-all --refresh
+
+# Clear cache and start fresh
+python fallout_wiki_scraper.py --clear
+python fallout_wiki_scraper.py --fetch-all
+```
+
+### Cache Management
+
+**Cache Location:** `website/backend/wiki_cache/`
+
+**Cache Stats:**
+- **357 pages** cached (31 locations, 46 quests, 200 characters, 39 factions, 9 items, 29 creatures)
+- **~1 MB** total size
+- **30-day** expiry (auto-refresh on access)
+
+**Committing Cache:**
+- Cache can be committed to repository (recommended for deployment)
+- Or excluded via `.gitignore` and fetched via GitHub Action
+- Current default: Cache is **included** in repository
 
 ### Documentation
 
