@@ -141,7 +141,7 @@ body {
     0 8px 24px rgba(0, 0, 0, 0.8);
   position: relative;
   display: grid;
-  grid-template-columns: 200px 1fr;
+  grid-template-columns: 250px 1fr;
   gap: 20px;
   min-height: 600px;
   z-index: 1;
@@ -338,38 +338,38 @@ body {
 
 /* Smaller version for sidebar */
 .split-flap-sidebar {
-  padding: 6px 8px;
+  padding: 6px 10px;
   gap: 2px;
   margin-bottom: 12px;
 }
 
 .split-flap-sidebar .split-flap-digit,
 .split-flap-sidebar .split-flap-month {
-  font-size: 11px;
-  padding: 3px 4px;
-  min-width: 16px;
+  font-size: 12px;
+  padding: 4px 5px;
+  min-width: 18px;
 }
 
 .split-flap-sidebar .split-flap-month {
-  min-width: 28px;
-  font-size: 10px;
-  padding: 3px 5px;
+  min-width: 32px;
+  font-size: 11px;
+  padding: 4px 6px;
 }
 
 .split-flap-sidebar .split-flap-separator {
-  width: 4px;
+  width: 5px;
   height: 1px;
-  margin: 0 1px;
+  margin: 0 2px;
 }
 
 .split-flap-sidebar .split-flap-time .split-flap-digit {
-  font-size: 10px;
-  padding: 3px 4px;
-  min-width: 16px;
+  font-size: 11px;
+  padding: 4px 5px;
+  min-width: 18px;
 }
 
 .split-flap-sidebar .split-flap-colon {
-  font-size: 11px;
+  font-size: 12px;
   padding: 0 2px;
 }
 
