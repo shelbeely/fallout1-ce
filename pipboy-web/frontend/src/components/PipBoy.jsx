@@ -51,6 +51,7 @@ function PipBoy() {
     <div className="pipboy">
       <div className="pipboy-screen">
         <div className="pipboy-header">
+          <img src="/images/logo.webp" alt="Pip-Boy 2000" className="pipboy-logo" />
           <h1>PIP-BOY 2000</h1>
           <div className="pipboy-tabs">
             <button 

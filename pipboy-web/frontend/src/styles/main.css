@@ -107,6 +107,14 @@ body {
   padding-bottom: 15px;
 }
 
+.pipboy-logo {
+  display: block;
+  margin: 0 auto 10px;
+  max-width: 120px;
+  height: auto;
+  filter: brightness(1.2) contrast(1.1);
+}
+
 .pipboy-header h1 {
   font-size: 32px;
   margin-bottom: 15px;
@@ -893,3 +901,4 @@ body {
     flex-direction: column;
   }
 }
+
