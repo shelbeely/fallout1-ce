@@ -12,10 +12,16 @@ fallout1-ce/
 │   ├── data/              # Lore databases (locations, NPCs, quests)
 │   ├── config.yaml        # Agent configuration
 │   └── requirements.txt   # Python dependencies
-├── website/               # Web dashboard
+├── website/               # Web dashboard (for viewers)
 │   ├── backend/           # Data collector & API server
 │   ├── frontend/          # React dashboard UI
 │   └── database/          # SQLite database for offline storage
+├── pipboy-web/            # Pip-Boy 2000 web interface (personal control)
+│   ├── backend/           # Flask API server & game bridge
+│   ├── frontend/          # React Pip-Boy UI
+│   ├── profiles/          # Character profiles (JSON)
+│   ├── README.md          # Detailed documentation
+│   └── QUICKSTART.md      # Quick setup guide
 └── README_MONOREPO.md    # This file
 ```
 
@@ -107,6 +113,38 @@ python src/agent.py
 - **Location**: `agent/`
 - **Purpose**: Makes decisions and controls the game
 - **Language**: Python
+- **Runs**: As separate process
+
+**Three Context Types**:
+1. **Game State**: HP, Location, Inventory, Quests, Time
+2. **Canon Context**: Where am I, Who is this NPC, What do they know
+3. **Strategy Context** (optional): Optimal paths, Warnings, Build advice
+
+### Website (Viewer Dashboard)
+- **Location**: `website/`
+- **Purpose**: Collects data and displays dashboard for viewers/audience
+- **Languages**: Python (backend), React (frontend)
+- **Runs**: As web server on port 3000/5000
+
+**Components**:
+- **Data Collector**: Reads JSON files, stores in SQLite
+- **API Server**: Serves data to frontend
+- **Frontend Dashboard**: Real-time character visualization
+
+### Pip-Boy Web (Personal Control Interface)
+- **Location**: `pipboy-web/`
+- **Purpose**: Personal web-based Pip-Boy for game control (like Fallout 4 companion app)
+- **Languages**: Python (backend), React (frontend)
+- **Runs**: As web server on port 3001/5001
+
+**Features**:
+- **Real-time Game Control**: Manage inventory, use items, equip weapons
+- **Status Monitoring**: View HP, AP, stats, skills in Pip-Boy style interface
+- **Character Profiles**: Browse Vault personnel and create custom character builds
+- **Quest & Map Tracking**: View active quests and discovered locations
+- **Separate from Viewer Website**: This is YOUR personal control interface
+
+See `pipboy-web/QUICKSTART.md` for setup instructions.
 - **Runs**: As separate process
 
 **Three Context Types**:
