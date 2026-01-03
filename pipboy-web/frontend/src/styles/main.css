@@ -432,37 +432,60 @@ body {
 
 .pipboy-content {
   min-height: 500px;
-  padding: 20px;
-  background: linear-gradient(135deg, #0a1a0a 0%, #051005 100%);
-  border: 4px solid #4a5a4a;
-  border-radius: 8px;
+  padding: 25px;
+  background: radial-gradient(ellipse at center, #0a1a0a 0%, #030805 100%);
+  border: 4px solid #3a4a3a;
+  border-radius: 10px;
   box-shadow: 
-    inset 0 0 40px rgba(0, 0, 0, 0.8),
-    inset 0 4px 8px rgba(0, 0, 0, 0.6),
-    0 2px 6px rgba(0, 0, 0, 0.4);
+    inset 0 0 60px rgba(0, 0, 0, 0.9),
+    inset 0 0 100px rgba(0, 20, 0, 0.5),
+    inset 0 6px 12px rgba(0, 0, 0, 0.8),
+    0 3px 8px rgba(0, 0, 0, 0.6);
   position: relative;
-  overflow-y: auto;
+  overflow: hidden;
+  /* CRT screen curvature */
+  transform: perspective(400px) rotateY(0deg);
+  transform-style: preserve-3d;
 }
 
-/* CRT screen effect */
+/* CRT screen curvature using clip-path for subtle barrel distortion */
 .pipboy-content::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: repeating-linear-gradient(
-    0deg,
-    rgba(0, 255, 0, 0.03) 0px,
-    rgba(0, 255, 0, 0.03) 1px,
-    transparent 1px,
-    transparent 2px
-  );
+  top: -5%;
+  left: -5%;
+  right: -5%;
+  bottom: -5%;
+  background: 
+    repeating-linear-gradient(
+      0deg,
+      rgba(0, 0, 0, 0.15) 0px,
+      transparent 1px,
+      transparent 2px,
+      rgba(0, 0, 0, 0.15) 3px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(0, 40, 0, 0.03) 0px,
+      transparent 1px,
+      transparent 3px
+    );
   pointer-events: none;
-  z-index: 1;
+  z-index: 10;
+  animation: scanline 8s linear infinite;
 }
 
+/* Horizontal scanlines with movement */
+@keyframes scanline {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(10px);
+  }
+}
+
+/* CRT screen glow and vignette */
 .pipboy-content::after {
   content: '';
   position: absolute;
@@ -470,19 +493,101 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  background: radial-gradient(
-    ellipse at center,
-    transparent 0%,
-    transparent 60%,
-    rgba(0, 0, 0, 0.3) 100%
-  );
+  background: 
+    radial-gradient(ellipse at center, transparent 0%, transparent 40%, rgba(0, 0, 0, 0.4) 80%, rgba(0, 0, 0, 0.8) 100%),
+    radial-gradient(ellipse at center, rgba(0, 255, 136, 0.05) 0%, transparent 60%);
   pointer-events: none;
-  z-index: 1;
+  z-index: 9;
+  box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.8);
 }
 
+/* Phosphor glow effect */
 .pipboy-content > * {
   position: relative;
   z-index: 2;
+  text-shadow: 
+    0 0 5px rgba(0, 255, 136, 0.5),
+    0 0 10px rgba(0, 255, 136, 0.3),
+    0 0 20px rgba(0, 255, 136, 0.1);
+}
+
+/* CRT flicker effect */
+@keyframes crt-flicker {
+  0% {
+    opacity: 0.98;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.98;
+  }
+}
+
+.pipboy-content {
+  animation: crt-flicker 0.15s infinite;
+  overflow-y: auto;
+}
+
+/* CRT Overlay for additional effects */
+.crt-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 11;
+  background: 
+    repeating-linear-gradient(
+      0deg,
+      rgba(0, 0, 0, 0.2) 0px,
+      rgba(0, 0, 0, 0.2) 1px,
+      transparent 1px,
+      transparent 2px
+    );
+  opacity: 0.4;
+}
+
+/* Glass reflection effect */
+.crt-glass-reflection {
+  position: absolute;
+  top: 5%;
+  left: 10%;
+  width: 40%;
+  height: 30%;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.03) 0%,
+    rgba(255, 255, 255, 0.01) 40%,
+    transparent 100%
+  );
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 12;
+  filter: blur(20px);
+  opacity: 0.6;
+}
+
+/* RGB pixel grid for authentic CRT look */
+@media (min-width: 1024px) {
+  .pipboy-content::before {
+    background: 
+      repeating-linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.15) 0px,
+        transparent 1px,
+        transparent 2px,
+        rgba(0, 0, 0, 0.15) 3px
+      ),
+      repeating-linear-gradient(
+        90deg,
+        rgba(0, 255, 136, 0.02) 0px,
+        rgba(255, 0, 136, 0.01) 1px,
+        rgba(136, 0, 255, 0.01) 2px,
+        transparent 3px
+      );
+  }
 }
 
 /* Loading State */

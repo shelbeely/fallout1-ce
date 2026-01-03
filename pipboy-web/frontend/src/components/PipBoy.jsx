@@ -115,6 +115,8 @@ function PipBoy() {
           </div>
 
           <div className="pipboy-content">
+            <div className="crt-overlay"></div>
+            <div className="crt-glass-reflection"></div>
             {activeTab === 'status' && <StatusTab gameData={gameData} />}
             {activeTab === 'stats' && <StatsTab />}
             {activeTab === 'inventory' && <InventoryTab />}
