@@ -338,39 +338,39 @@ body {
 
 /* Smaller version for sidebar */
 .split-flap-sidebar {
-  padding: 8px 12px;
-  gap: 3px;
+  padding: 6px 8px;
+  gap: 2px;
   margin-bottom: 12px;
 }
 
 .split-flap-sidebar .split-flap-digit,
 .split-flap-sidebar .split-flap-month {
-  font-size: 14px;
-  padding: 5px 6px;
-  min-width: 22px;
+  font-size: 11px;
+  padding: 3px 4px;
+  min-width: 16px;
 }
 
 .split-flap-sidebar .split-flap-month {
-  min-width: 36px;
-  font-size: 12px;
-  padding: 5px 8px;
+  min-width: 28px;
+  font-size: 10px;
+  padding: 3px 5px;
 }
 
 .split-flap-sidebar .split-flap-separator {
-  width: 6px;
+  width: 4px;
   height: 1px;
-  margin: 0 2px;
+  margin: 0 1px;
 }
 
 .split-flap-sidebar .split-flap-time .split-flap-digit {
-  font-size: 13px;
-  padding: 4px 5px;
-  min-width: 20px;
+  font-size: 10px;
+  padding: 3px 4px;
+  min-width: 16px;
 }
 
 .split-flap-sidebar .split-flap-colon {
-  font-size: 14px;
-  padding: 0 3px;
+  font-size: 11px;
+  padding: 0 2px;
 }
 
 .split-flap-digit,
