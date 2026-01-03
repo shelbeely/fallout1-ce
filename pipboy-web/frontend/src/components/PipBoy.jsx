@@ -62,9 +62,29 @@ function PipBoy() {
       <div className="tv-glass-background"></div>
       <div className="pipboy-screen">
         <div className="pipboy-sidebar">
+          {/* Split-flap date display - moved to sidebar */}
+          <div className="split-flap-display split-flap-sidebar">
+            <div className="split-flap-digit">{String(currentDate.getDate()).padStart(2, '0')[0]}</div>
+            <div className="split-flap-digit">{String(currentDate.getDate()).padStart(2, '0')[1]}</div>
+            <div className="split-flap-separator"></div>
+            <div className="split-flap-month">{currentDate.toLocaleString('en-US', { month: 'short' }).toUpperCase()}</div>
+            <div className="split-flap-separator"></div>
+            <div className="split-flap-digit">{String(currentDate.getFullYear())[0]}</div>
+            <div className="split-flap-digit">{String(currentDate.getFullYear())[1]}</div>
+            <div className="split-flap-digit">{String(currentDate.getFullYear())[2]}</div>
+            <div className="split-flap-digit">{String(currentDate.getFullYear())[3]}</div>
+            <div className="split-flap-separator"></div>
+            <div className="split-flap-time">
+              <span className="split-flap-digit">{String(currentDate.getHours()).padStart(2, '0')[0]}</span>
+              <span className="split-flap-digit">{String(currentDate.getHours()).padStart(2, '0')[1]}</span>
+              <span className="split-flap-colon">:</span>
+              <span className="split-flap-digit">{String(currentDate.getMinutes()).padStart(2, '0')[0]}</span>
+              <span className="split-flap-digit">{String(currentDate.getMinutes()).padStart(2, '0')[1]}</span>
+            </div>
+          </div>
+
           <div className="pipboy-header">
             <img src="/images/logo.webp" alt="Pip-Boy 2000" className="pipboy-logo" />
-            <h1>PIP-BOY 2000</h1>
           </div>
           <div className="pipboy-tabs">
             <button 
@@ -95,27 +115,6 @@ function PipBoy() {
         </div>
 
         <div className="pipboy-main">
-          {/* Split-flap date display */}
-          <div className="split-flap-display">
-            <div className="split-flap-digit">{String(currentDate.getDate()).padStart(2, '0')[0]}</div>
-            <div className="split-flap-digit">{String(currentDate.getDate()).padStart(2, '0')[1]}</div>
-            <div className="split-flap-separator"></div>
-            <div className="split-flap-month">{currentDate.toLocaleString('en-US', { month: 'short' }).toUpperCase()}</div>
-            <div className="split-flap-separator"></div>
-            <div className="split-flap-digit">{String(currentDate.getFullYear())[0]}</div>
-            <div className="split-flap-digit">{String(currentDate.getFullYear())[1]}</div>
-            <div className="split-flap-digit">{String(currentDate.getFullYear())[2]}</div>
-            <div className="split-flap-digit">{String(currentDate.getFullYear())[3]}</div>
-            <div className="split-flap-separator"></div>
-            <div className="split-flap-time">
-              <span className="split-flap-digit">{String(currentDate.getHours()).padStart(2, '0')[0]}</span>
-              <span className="split-flap-digit">{String(currentDate.getHours()).padStart(2, '0')[1]}</span>
-              <span className="split-flap-colon">:</span>
-              <span className="split-flap-digit">{String(currentDate.getMinutes()).padStart(2, '0')[0]}</span>
-              <span className="split-flap-digit">{String(currentDate.getMinutes()).padStart(2, '0')[1]}</span>
-            </div>
-          </div>
-
           <div className="pipboy-content">
             {activeTab === 'status' && <StatusTab gameData={gameData} />}
             {activeTab === 'stats' && <StatsTab />}
