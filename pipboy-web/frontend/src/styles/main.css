@@ -455,18 +455,23 @@ body {
   /* Background similar to TV glass with CRT feel */
   background: radial-gradient(ellipse at center, #0a1a0a 0%, #030805 100%);
   border: 4px solid #3a4a3a;
-  border-radius: 10px;
+  /* More rounded corners for CRT tube appearance */
+  border-radius: 20px;
   box-shadow: 
     inset 0 0 60px rgba(0, 0, 0, 0.9),
     inset 0 0 100px rgba(0, 20, 0, 0.5),
-    inset 0 6px 12px rgba(0, 0, 0, 0.8),
-    0 3px 8px rgba(0, 0, 0, 0.6);
+    inset 0 8px 16px rgba(0, 0, 0, 0.9),
+    inset 0 -8px 16px rgba(0, 0, 0, 0.7),
+    0 4px 12px rgba(0, 0, 0, 0.7);
   /* Enhanced filters for CRT appearance */
   filter:
     contrast(1.05)
     brightness(1.1)
     saturate(1.15);
   overflow-y: auto;
+  /* Subtle CRT screen bulge/curvature */
+  transform: perspective(1000px) rotateX(0deg);
+  transform-style: preserve-3d;
 }
 
 /* Improved scanlines with RGB mask from user's code */
@@ -489,6 +494,8 @@ body {
   pointer-events: none;
   z-index: 10;
   animation: scanline-move 8s linear infinite;
+  /* Match the rounded corners */
+  border-radius: 16px;
 }
 
 /* Scanline animation */
@@ -517,6 +524,8 @@ body {
   pointer-events: none;
   z-index: 9;
   box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.8);
+  /* Match rounded corners */
+  border-radius: 16px;
 }
 
 /* Phosphor glow effect on content */
