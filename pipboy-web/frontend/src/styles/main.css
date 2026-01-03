@@ -303,7 +303,7 @@ body {
   overflow: hidden;
 }
 
-/* Apply metal grunge to sidebar (tan border) */
+/* Apply metal grunge to sidebar using inherited utility styles */
 .pipboy-sidebar::before {
   content: '';
   position: absolute;
@@ -502,7 +502,7 @@ body {
   position: relative;
 }
 
-/* Apply metal grunge to split-flap display (tan border) */
+/* Apply metal grunge to split-flap display using inherited utility styles */
 .split-flap-display::before {
   content: '';
   position: absolute;
