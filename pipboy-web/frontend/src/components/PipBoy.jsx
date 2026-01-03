@@ -9,6 +9,15 @@ function PipBoy() {
   const [activeTab, setActiveTab] = useState('status')
   const [gameData, setGameData] = useState(null)
   const [socket, setSocket] = useState(null)
+  const [currentDate, setCurrentDate] = useState(new Date())
+
+  // Update date every second for animation
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentDate(new Date())
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [])
 
   useEffect(() => {
     // Connect to WebSocket for real-time updates
@@ -49,42 +58,69 @@ function PipBoy() {
 
   return (
     <div className="pipboy">
+      {/* TV Glass background layer */}
+      <div className="tv-glass-background"></div>
       <div className="pipboy-screen">
-        <div className="pipboy-header">
-          <h1>PIP-BOY 2000</h1>
+        <div className="pipboy-sidebar">
+          {/* Split-flap date display - moved to sidebar */}
+          <div className="split-flap-display split-flap-sidebar">
+            <div className="split-flap-digit">{String(currentDate.getDate()).padStart(2, '0')[0]}</div>
+            <div className="split-flap-digit">{String(currentDate.getDate()).padStart(2, '0')[1]}</div>
+            <div className="split-flap-separator"></div>
+            <div className="split-flap-month">{currentDate.toLocaleString('en-US', { month: 'short' }).toUpperCase()}</div>
+            <div className="split-flap-separator"></div>
+            <div className="split-flap-digit">{String(currentDate.getFullYear())[0]}</div>
+            <div className="split-flap-digit">{String(currentDate.getFullYear())[1]}</div>
+            <div className="split-flap-digit">{String(currentDate.getFullYear())[2]}</div>
+            <div className="split-flap-digit">{String(currentDate.getFullYear())[3]}</div>
+            <div className="split-flap-separator"></div>
+            <div className="split-flap-time">
+              <span className="split-flap-digit">{String(currentDate.getHours()).padStart(2, '0')[0]}</span>
+              <span className="split-flap-digit">{String(currentDate.getHours()).padStart(2, '0')[1]}</span>
+              <span className="split-flap-colon">:</span>
+              <span className="split-flap-digit">{String(currentDate.getMinutes()).padStart(2, '0')[0]}</span>
+              <span className="split-flap-digit">{String(currentDate.getMinutes()).padStart(2, '0')[1]}</span>
+            </div>
+          </div>
+
+          <div className="pipboy-header">
+            <img src="/images/logo.webp" alt="Pip-Boy 2000" className="pipboy-logo" />
+          </div>
           <div className="pipboy-tabs">
             <button 
               className={activeTab === 'status' ? 'active' : ''} 
               onClick={() => setActiveTab('status')}
             >
-              STAT
+              Status
             </button>
             <button 
               className={activeTab === 'stats' ? 'active' : ''} 
               onClick={() => setActiveTab('stats')}
             >
-              SPECIAL
+              Special
             </button>
             <button 
               className={activeTab === 'inventory' ? 'active' : ''} 
               onClick={() => setActiveTab('inventory')}
             >
-              INV
+              Inventory
             </button>
             <button 
               className={activeTab === 'data' ? 'active' : ''} 
               onClick={() => setActiveTab('data')}
             >
-              DATA
+              Data
             </button>
           </div>
         </div>
 
-        <div className="pipboy-content">
-          {activeTab === 'status' && <StatusTab gameData={gameData} />}
-          {activeTab === 'stats' && <StatsTab />}
-          {activeTab === 'inventory' && <InventoryTab />}
-          {activeTab === 'data' && <DataTab />}
+        <div className="pipboy-main">
+          <div className="pipboy-content">
+            {activeTab === 'status' && <StatusTab gameData={gameData} />}
+            {activeTab === 'stats' && <StatsTab />}
+            {activeTab === 'inventory' && <InventoryTab />}
+            {activeTab === 'data' && <DataTab />}
+          </div>
         </div>
       </div>
     </div>
