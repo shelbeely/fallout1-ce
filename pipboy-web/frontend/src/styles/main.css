@@ -200,56 +200,227 @@ body {
 .pipboy-tabs {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 15px;
 }
 
 .pipboy-tabs button {
-  background: linear-gradient(180deg, #4a3828 0%, #3a2818 50%, #2a1808 100%);
-  color: #c4a064;
-  border: 3px solid #5a4838;
-  border-radius: 6px;
-  padding: 12px 15px;
+  background: linear-gradient(135deg, #1a0a00 0%, #2a1508 50%, #1a0a00 100%);
+  color: #d4a574;
+  border: 3px solid #3a2010;
+  border-radius: 8px;
+  padding: 15px 20px 15px 50px;
   font-family: 'Courier New', monospace;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: bold;
   cursor: pointer;
   transition: all 0.2s;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 1.5px;
   text-align: left;
   position: relative;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+  text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.9);
   box-shadow: 
-    inset 0 1px 0 rgba(255, 255, 255, 0.1),
-    0 3px 6px rgba(0, 0, 0, 0.4);
+    inset 0 2px 4px rgba(0, 0, 0, 0.6),
+    0 3px 8px rgba(0, 0, 0, 0.5);
 }
 
+/* Red arcade button indicator */
 .pipboy-tabs button::before {
-  content: '●';
+  content: '';
   position: absolute;
-  left: -10px;
-  color: #8a6a4a;
-  font-size: 18px;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #ff6644 0%, #cc3311 40%, #881100 100%);
+  border: 3px solid #2a1508;
+  box-shadow: 
+    0 0 8px rgba(255, 68, 34, 0.6),
+    inset 0 2px 4px rgba(255, 136, 102, 0.4),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.6);
+}
+
+/* Glowing effect for non-active buttons */
+.pipboy-tabs button::after {
+  content: '';
+  position: absolute;
+  left: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(255, 102, 68, 0.3);
+  box-shadow: 0 0 10px rgba(255, 68, 34, 0.5);
 }
 
 .pipboy-tabs button:hover {
-  background: linear-gradient(180deg, #5a4838 0%, #4a3828 50%, #3a2818 100%);
-  border-color: #6a5848;
-  color: #d4b084;
+  background: linear-gradient(135deg, #2a1508 0%, #3a2010 50%, #2a1508 100%);
+  border-color: #4a3020;
+  color: #e4b584;
+  box-shadow: 
+    inset 0 2px 4px rgba(0, 0, 0, 0.5),
+    0 4px 10px rgba(0, 0, 0, 0.6);
+}
+
+.pipboy-tabs button:hover::before {
+  background: radial-gradient(circle at 30% 30%, #ff7755 0%, #dd4422 40%, #991100 100%);
+  box-shadow: 
+    0 0 12px rgba(255, 119, 85, 0.8),
+    inset 0 2px 4px rgba(255, 153, 119, 0.5),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.6);
 }
 
 .pipboy-tabs button.active {
-  background: linear-gradient(180deg, #6a5848 0%, #5a4838 50%, #4a3828 100%);
+  background: linear-gradient(135deg, #2a1810 0%, #3a2518 50%, #2a1810 100%);
   color: #ffcc88;
-  border-color: #7a6858;
+  border-color: #5a4030;
   box-shadow: 
-    inset 0 3px 6px rgba(0, 0, 0, 0.3),
-    0 0 12px rgba(212, 165, 116, 0.4);
+    inset 0 3px 6px rgba(0, 0, 0, 0.4),
+    0 0 15px rgba(255, 204, 136, 0.3);
 }
 
+/* Bright glowing red indicator for active button */
 .pipboy-tabs button.active::before {
+  background: radial-gradient(circle at 30% 30%, #ffaa88 0%, #ff5533 40%, #cc2200 100%);
+  border-color: #3a2518;
+  box-shadow: 
+    0 0 20px rgba(255, 85, 51, 1),
+    0 0 40px rgba(255, 85, 51, 0.6),
+    inset 0 2px 4px rgba(255, 170, 136, 0.6),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.5);
+  animation: arcade-glow 2s ease-in-out infinite;
+}
+
+.pipboy-tabs button.active::after {
+  background: rgba(255, 85, 51, 0.6);
+  box-shadow: 
+    0 0 20px rgba(255, 85, 51, 0.8),
+    0 0 40px rgba(255, 85, 51, 0.4);
+  animation: arcade-glow 2s ease-in-out infinite;
+}
+
+@keyframes arcade-glow {
+  0%, 100% { 
+    opacity: 1;
+    filter: brightness(1);
+  }
+  50% { 
+    opacity: 0.85;
+    filter: brightness(1.2);
+  }
+}
+
+/* Split-Flap Date Display */
+.split-flap-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 12px 20px;
+  margin-bottom: 15px;
+  background: linear-gradient(180deg, #1a0f08 0%, #0f0805 100%);
+  border: 3px solid #3a2818;
+  border-radius: 6px;
+  box-shadow: 
+    inset 0 3px 6px rgba(0, 0, 0, 0.8),
+    0 2px 6px rgba(0, 0, 0, 0.5);
+}
+
+.split-flap-digit,
+.split-flap-month {
+  background: linear-gradient(180deg, #2a1a0a 0%, #1a0a00 48%, #0a0500 52%, #1a0a00 100%);
   color: #ffcc88;
-  text-shadow: 0 0 8px rgba(255, 204, 136, 0.6);
+  font-family: 'Courier New', monospace;
+  font-size: 20px;
+  font-weight: bold;
+  padding: 8px 10px;
+  min-width: 32px;
+  text-align: center;
+  border: 2px solid #4a3020;
+  border-radius: 4px;
+  box-shadow: 
+    inset 0 1px 2px rgba(255, 204, 136, 0.1),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.8),
+    0 2px 4px rgba(0, 0, 0, 0.6);
+  text-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.9),
+    0 0 8px rgba(255, 204, 136, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Center line to mimic split-flap cards */
+.split-flap-digit::after,
+.split-flap-month::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: linear-gradient(90deg, 
+    transparent 0%,
+    rgba(0, 0, 0, 0.6) 10%,
+    rgba(0, 0, 0, 0.8) 50%,
+    rgba(0, 0, 0, 0.6) 90%,
+    transparent 100%
+  );
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.5);
+}
+
+.split-flap-month {
+  min-width: 48px;
+  font-size: 16px;
+  padding: 8px 12px;
+}
+
+.split-flap-separator {
+  width: 8px;
+  height: 2px;
+  background: #4a3020;
+  margin: 0 4px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.split-flap-time {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 8px;
+}
+
+.split-flap-time .split-flap-digit {
+  font-size: 18px;
+  padding: 6px 8px;
+  min-width: 28px;
+}
+
+.split-flap-colon {
+  color: #ffcc88;
+  font-size: 20px;
+  font-weight: bold;
+  padding: 0 4px;
+  text-shadow: 0 0 8px rgba(255, 204, 136, 0.4);
+}
+
+/* Flipping animation for digits */
+@keyframes flip {
+  0% {
+    transform: rotateX(0deg);
+  }
+  50% {
+    transform: rotateX(90deg);
+  }
+  100% {
+    transform: rotateX(0deg);
+  }
+}
+
+.split-flap-digit {
+  animation: flip 0.3s ease-in-out;
 }
 
 /* Pip-Boy Screen Content Area */

@@ -9,6 +9,15 @@ function PipBoy() {
   const [activeTab, setActiveTab] = useState('status')
   const [gameData, setGameData] = useState(null)
   const [socket, setSocket] = useState(null)
+  const [currentDate, setCurrentDate] = useState(new Date())
+
+  // Update date every second for animation
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentDate(new Date())
+    }, 1000)
+    return () => clearInterval(timer)
+  }, [])
 
   useEffect(() => {
     // Connect to WebSocket for real-time updates
@@ -84,6 +93,27 @@ function PipBoy() {
         </div>
 
         <div className="pipboy-main">
+          {/* Split-flap date display */}
+          <div className="split-flap-display">
+            <div className="split-flap-digit">{String(currentDate.getDate()).padStart(2, '0')[0]}</div>
+            <div className="split-flap-digit">{String(currentDate.getDate()).padStart(2, '0')[1]}</div>
+            <div className="split-flap-separator"></div>
+            <div className="split-flap-month">{currentDate.toLocaleString('en-US', { month: 'short' }).toUpperCase()}</div>
+            <div className="split-flap-separator"></div>
+            <div className="split-flap-digit">{String(currentDate.getFullYear())[0]}</div>
+            <div className="split-flap-digit">{String(currentDate.getFullYear())[1]}</div>
+            <div className="split-flap-digit">{String(currentDate.getFullYear())[2]}</div>
+            <div className="split-flap-digit">{String(currentDate.getFullYear())[3]}</div>
+            <div className="split-flap-separator"></div>
+            <div className="split-flap-time">
+              <span className="split-flap-digit">{String(currentDate.getHours()).padStart(2, '0')[0]}</span>
+              <span className="split-flap-digit">{String(currentDate.getHours()).padStart(2, '0')[1]}</span>
+              <span className="split-flap-colon">:</span>
+              <span className="split-flap-digit">{String(currentDate.getMinutes()).padStart(2, '0')[0]}</span>
+              <span className="split-flap-digit">{String(currentDate.getMinutes()).padStart(2, '0')[1]}</span>
+            </div>
+          </div>
+
           <div className="pipboy-content">
             {activeTab === 'status' && <StatusTab gameData={gameData} />}
             {activeTab === 'stats' && <StatsTab />}
