@@ -433,6 +433,9 @@ body {
 .pipboy-content {
   min-height: 500px;
   padding: 25px;
+  position: relative;
+  overflow: hidden;
+  /* Background similar to TV glass with CRT feel */
   background: radial-gradient(ellipse at center, #0a1a0a 0%, #030805 100%);
   border: 4px solid #3a4a3a;
   border-radius: 10px;
@@ -441,67 +444,65 @@ body {
     inset 0 0 100px rgba(0, 20, 0, 0.5),
     inset 0 6px 12px rgba(0, 0, 0, 0.8),
     0 3px 8px rgba(0, 0, 0, 0.6);
-  position: relative;
-  overflow: hidden;
-  /* CRT screen curvature */
-  transform: perspective(400px) rotateY(0deg);
-  transform-style: preserve-3d;
+  /* Enhanced filters for CRT appearance */
+  filter:
+    contrast(1.05)
+    brightness(1.1)
+    saturate(1.15);
+  overflow-y: auto;
 }
 
-/* CRT screen curvature using clip-path for subtle barrel distortion */
+/* Improved scanlines with RGB mask from user's code */
 .pipboy-content::before {
   content: '';
   position: absolute;
-  top: -5%;
-  left: -5%;
-  right: -5%;
-  bottom: -5%;
-  background: 
-    repeating-linear-gradient(
-      0deg,
-      rgba(0, 0, 0, 0.15) 0px,
-      transparent 1px,
-      transparent 2px,
-      rgba(0, 0, 0, 0.15) 3px
+  inset: 0;
+  background:
+    linear-gradient(
+      rgba(18,16,16,0) 50%,
+      rgba(0,0,0,0.25) 50%
     ),
-    repeating-linear-gradient(
+    linear-gradient(
       90deg,
-      rgba(0, 40, 0, 0.03) 0px,
-      transparent 1px,
-      transparent 3px
+      rgba(255,0,0,0.04),
+      rgba(0,255,0,0.02),
+      rgba(0,0,255,0.04)
     );
+  background-size: 100% 2px, 3px 100%;
   pointer-events: none;
   z-index: 10;
-  animation: scanline 8s linear infinite;
+  animation: scanline-move 8s linear infinite;
 }
 
-/* Horizontal scanlines with movement */
-@keyframes scanline {
+/* Scanline animation */
+@keyframes scanline-move {
   0% {
     transform: translateY(0);
   }
   100% {
-    transform: translateY(10px);
+    transform: translateY(4px);
   }
 }
 
-/* CRT screen glow and vignette */
+/* Enhanced CRT glass vignette and overlay */
 .pipboy-content::after {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: 
-    radial-gradient(ellipse at center, transparent 0%, transparent 40%, rgba(0, 0, 0, 0.4) 80%, rgba(0, 0, 0, 0.8) 100%),
-    radial-gradient(ellipse at center, rgba(0, 255, 136, 0.05) 0%, transparent 60%);
+  inset: 0;
+  background:
+    radial-gradient(
+      ellipse at center,
+      rgba(255,255,255,0.04) 0%,
+      rgba(0,0,0,0.5) 70%,
+      rgba(0,0,0,0.8) 100%
+    );
+  mix-blend-mode: overlay;
   pointer-events: none;
   z-index: 9;
   box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.8);
 }
 
-/* Phosphor glow effect */
+/* Phosphor glow effect on content */
 .pipboy-content > * {
   position: relative;
   z-index: 2;
@@ -511,83 +512,33 @@ body {
     0 0 20px rgba(0, 255, 136, 0.1);
 }
 
-/* CRT flicker effect */
+/* Subtle CRT flicker */
 @keyframes crt-flicker {
   0% {
     opacity: 0.98;
+    filter:
+      contrast(1.05)
+      brightness(1.1)
+      saturate(1.15);
   }
   50% {
     opacity: 1;
+    filter:
+      contrast(1.06)
+      brightness(1.12)
+      saturate(1.16);
   }
   100% {
     opacity: 0.98;
+    filter:
+      contrast(1.05)
+      brightness(1.1)
+      saturate(1.15);
   }
 }
 
 .pipboy-content {
-  animation: crt-flicker 0.15s infinite;
-  overflow-y: auto;
-}
-
-/* CRT Overlay for additional effects */
-.crt-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  pointer-events: none;
-  z-index: 11;
-  background: 
-    repeating-linear-gradient(
-      0deg,
-      rgba(0, 0, 0, 0.2) 0px,
-      rgba(0, 0, 0, 0.2) 1px,
-      transparent 1px,
-      transparent 2px
-    );
-  opacity: 0.4;
-}
-
-/* Glass reflection effect */
-.crt-glass-reflection {
-  position: absolute;
-  top: 5%;
-  left: 10%;
-  width: 40%;
-  height: 30%;
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.03) 0%,
-    rgba(255, 255, 255, 0.01) 40%,
-    transparent 100%
-  );
-  border-radius: 50%;
-  pointer-events: none;
-  z-index: 12;
-  filter: blur(20px);
-  opacity: 0.6;
-}
-
-/* RGB pixel grid for authentic CRT look */
-@media (min-width: 1024px) {
-  .pipboy-content::before {
-    background: 
-      repeating-linear-gradient(
-        0deg,
-        rgba(0, 0, 0, 0.15) 0px,
-        transparent 1px,
-        transparent 2px,
-        rgba(0, 0, 0, 0.15) 3px
-      ),
-      repeating-linear-gradient(
-        90deg,
-        rgba(0, 255, 136, 0.02) 0px,
-        rgba(255, 0, 136, 0.01) 1px,
-        rgba(136, 0, 255, 0.01) 2px,
-        transparent 3px
-      );
-  }
+  animation: crt-flicker 0.2s infinite;
 }
 
 /* Loading State */
