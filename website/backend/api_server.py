@@ -10,11 +10,14 @@ from flask_cors import CORS
 import sqlite3
 import json
 from datetime import datetime, timedelta
+from pathlib import Path
+from character_data_generator import CharacterDataGenerator
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for frontend
 
 DB_PATH = "./database/game_data.db"
+GAME_DATA_DIR = Path("../..")
 
 def get_db():
     """Get database connection"""
@@ -273,6 +276,84 @@ def health_check():
             "status": "unhealthy",
             "error": str(e)
         }), 500
+
+@app.route('/api/character-extended', methods=['GET'])
+def get_character_extended():
+    """Get extended character data for terminal UI"""
+    try:
+        # Check for cached extended data file
+        extended_file = GAME_DATA_DIR / "character_extended.json"
+        
+        if extended_file.exists():
+            # Return cached data if recent (less than 10 seconds old)
+            import os
+            if (datetime.now().timestamp() - os.path.getmtime(extended_file)) < 10:
+                with open(extended_file, 'r') as f:
+                    return jsonify(json.load(f))
+        
+        # Generate new extended data
+        generator = CharacterDataGenerator(str(GAME_DATA_DIR))
+        extended_data = generator.generate_extended_data()
+        
+        # Cache it
+        with open(extended_file, 'w') as f:
+            json.dump(extended_data, f, indent=2)
+        
+        return jsonify(extended_data)
+    
+    except Exception as e:
+        return jsonify({
+            "error": str(e),
+            "message": "Error generating extended character data"
+        }), 500
+
+@app.route('/api/timeline', methods=['GET'])
+def get_timeline():
+    """Get timeline events"""
+    try:
+        generator = CharacterDataGenerator(str(GAME_DATA_DIR))
+        base_data = generator.load_base_game_data()
+        timeline = generator._generate_timeline(base_data)
+        return jsonify(timeline)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/quests', methods=['GET'])
+def get_quests():
+    """Get quest log"""
+    try:
+        generator = CharacterDataGenerator(str(GAME_DATA_DIR))
+        base_data = generator.load_base_game_data()
+        quests = generator._generate_quests(base_data)
+        return jsonify({"quests": quests})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/locations-extended', methods=['GET'])
+def get_locations_extended():
+    """Get extended location data"""
+    try:
+        generator = CharacterDataGenerator(str(GAME_DATA_DIR))
+        base_data = generator.load_base_game_data()
+        locations = generator._generate_locations(base_data)
+        map_data = generator._generate_map_data(base_data)
+        return jsonify({
+            "locations": locations,
+            "map": map_data
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/journal', methods=['GET'])
+def get_journal():
+    """Get journal entries"""
+    try:
+        generator = CharacterDataGenerator(str(GAME_DATA_DIR))
+        base_data = generator.load_base_game_data()
+        journal = generator._generate_journal(base_data)
+        return jsonify({"journal": journal})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     import argparse

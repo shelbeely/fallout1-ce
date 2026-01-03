@@ -9,6 +9,7 @@
 #include "game/critter.h"
 #include "game/game.h"
 #include "game/gconfig.h"
+#include "game/inventry.h"
 #include "game/item.h"
 #include "game/map.h"
 #include "game/object.h"
@@ -17,6 +18,8 @@
 #include "game/skill.h"
 #include "game/stat.h"
 #include "game/tile.h"
+#include "game/trait.h"
+#include "game/worldmap.h"
 
 namespace fallout {
 
@@ -1122,6 +1125,27 @@ static void writeGameState() {
     json.addInt("carry_weight", stat_level(obj_dude, STAT_CARRY_WEIGHT));
     json.addInt("melee_damage", stat_level(obj_dude, STAT_MELEE_DAMAGE));
     
+    // Additional derived stats
+    json.addInt("healing_rate", stat_level(obj_dude, STAT_HEALING_RATE));
+    json.addInt("critical_chance", stat_level(obj_dude, STAT_CRITICAL_CHANCE));
+    json.addInt("damage_resistance", stat_level(obj_dude, STAT_DAMAGE_RESISTANCE));
+    json.addInt("radiation_resistance", stat_level(obj_dude, STAT_RADIATION_RESISTANCE));
+    json.addInt("poison_resistance", stat_level(obj_dude, STAT_POISON_RESISTANCE));
+    
+    // Karma and reputation (PC-specific stats)
+    json.addInt("karma", stat_pc_get(PC_STAT_KARMA));
+    json.addInt("reputation", stat_pc_get(PC_STAT_REPUTATION));
+    
+    // Character identity
+    json.addInt("age", stat_level(obj_dude, STAT_AGE));
+    json.addInt("gender", stat_level(obj_dude, STAT_GENDER)); // 0=male, 1=female
+    
+    // Character name
+    char* playerName = object_name(obj_dude);
+    if (playerName && strlen(playerName) > 0) {
+        json.addString("character_name", playerName);
+    }
+    
     // Combat state
     json.addBool("in_combat", isInCombat());
     
@@ -1157,6 +1181,26 @@ static void writeGameState() {
         json.addObjectInArray();
         json.addString("name", perk_name(perks[i]));
         json.addInt("level", perk_level(perks[i]));
+        json.endObjectInArray();
+    }
+    json.endArray();
+    
+    // Traits
+    json.startArray("traits");
+    int trait1, trait2;
+    trait_get(&trait1, &trait2);
+    
+    if (trait1 != -1) {
+        json.addObjectInArray();
+        json.addString("name", trait_name(trait1));
+        json.addString("description", trait_description(trait1));
+        json.endObjectInArray();
+    }
+    
+    if (trait2 != -1) {
+        json.addObjectInArray();
+        json.addString("name", trait_name(trait2));
+        json.addString("description", trait_description(trait2));
         json.endObjectInArray();
     }
     json.endArray();
@@ -1228,6 +1272,116 @@ static void writeGameState() {
         }
     }
     json.endArray();
+    
+    // Equipped items
+    json.startObject("equipped");
+    
+    Object* rightHand = inven_right_hand(obj_dude);
+    if (rightHand) {
+        json.startObject("right_hand");
+        json.addInt("pid", rightHand->pid);
+        char* rightName = object_name(rightHand);
+        if (rightName) {
+            json.addString("name", rightName);
+        }
+        json.endObject();
+    }
+    
+    Object* leftHand = inven_left_hand(obj_dude);
+    if (leftHand) {
+        json.startObject("left_hand");
+        json.addInt("pid", leftHand->pid);
+        char* leftName = object_name(leftHand);
+        if (leftName) {
+            json.addString("name", leftName);
+        }
+        json.endObject();
+    }
+    
+    Object* armor = inven_worn(obj_dude);
+    if (armor) {
+        json.startObject("armor");
+        json.addInt("pid", armor->pid);
+        char* armorName = object_name(armor);
+        if (armorName) {
+            json.addString("name", armorName);
+        }
+        json.endObject();
+    }
+    
+    json.endObject(); // equipped
+    
+    // Quest tracking (key quest global variables)
+    json.startObject("quests");
+    
+    // Main story quests
+    json.addInt("find_water_chip", game_get_global_var(GVAR_FIND_WATER_CHIP));
+    json.addInt("destroy_vats", game_get_global_var(GVAR_DESTROY_VATS));
+    json.addInt("destroy_master", game_get_global_var(GVAR_DESTROY_MASTER));
+    json.addInt("days_to_vault13_discovery", game_get_global_var(GVAR_DAYS_TO_VAULT13_DISCOVERY));
+    json.addInt("vault_water_days", game_get_global_var(GVAR_VAULT_WATER));
+    
+    // Major side quests
+    json.addInt("rescue_tandi", game_get_global_var(GVAR_RESCUE_TANDI));
+    json.addInt("tandi_status", game_get_global_var(GVAR_TANDI_STATUS));
+    json.addInt("kill_radscorpions", game_get_global_var(GVAR_KILL_RADSCORPIONS));
+    json.addInt("kill_deathclaw", game_get_global_var(GVAR_KILL_DEATHCLAW));
+    json.addInt("capture_gizmo", game_get_global_var(GVAR_CAPTURE_GIZMO));
+    json.addInt("kill_killian", game_get_global_var(GVAR_KILL_KILLIAN));
+    json.addInt("missing_caravan", game_get_global_var(GVAR_MISSING_CARAVAN));
+    json.addInt("steal_necklace", game_get_global_var(GVAR_STEAL_NECKLACE));
+    json.addInt("become_an_initiate", game_get_global_var(GVAR_BECOME_AN_INITIATE));
+    json.addInt("find_lost_initiate", game_get_global_var(GVAR_FIND_LOST_INITIATE));
+    json.addInt("kill_merchant", game_get_global_var(GVAR_KILL_MERCHANT));
+    json.addInt("kill_jain", game_get_global_var(GVAR_KILL_JAIN));
+    json.addInt("kill_super_mutants", game_get_global_var(GVAR_KILL_SUPER_MUTANTS));
+    json.addInt("fix_necropolis_pump", game_get_global_var(GVAR_NECROP_WATER_PUMP_FIXED));
+    json.addInt("necropolis_water_chip_taken", game_get_global_var(GVAR_NECROP_WATER_CHIP_TAKEN));
+    json.addInt("gang_war", game_get_global_var(GVAR_GANG_WAR));
+    json.addInt("destroy_followers", game_get_global_var(GVAR_DESTROY_FOLLOWERS));
+    json.addInt("fix_farm", game_get_global_var(GVAR_FIX_FARM));
+    json.addInt("save_sinthia", game_get_global_var(GVAR_SAVE_SINTHIA));
+    json.addInt("cure_jarvis", game_get_global_var(GVAR_CURE_JARVIS));
+    json.addInt("make_antidote", game_get_global_var(GVAR_MAKE_ANTIDOTE));
+    
+    json.endObject();
+    
+    // Town reputation (enemy status with each faction)
+    json.startObject("town_reputation");
+    json.addInt("vault_13", game_get_global_var(GVAR_ENEMY_VAULT_13));
+    json.addInt("shady_sands", game_get_global_var(GVAR_ENEMY_SHADY_SANDS));
+    json.addInt("junktown", game_get_global_var(GVAR_ENEMY_JUNKTOWN));
+    json.addInt("hub", game_get_global_var(GVAR_ENEMY_HUB));
+    json.addInt("necropolis", game_get_global_var(GVAR_ENEMY_NECROPOLIS));
+    json.addInt("brotherhood", game_get_global_var(GVAR_ENEMY_BROTHERHOOD));
+    json.addInt("adytum", game_get_global_var(GVAR_ENEMY_ADYTUM));
+    json.addInt("rippers", game_get_global_var(GVAR_ENEMY_RIPPERS));
+    json.addInt("blades", game_get_global_var(GVAR_ENEMY_BLADES));
+    json.addInt("raiders", game_get_global_var(GVAR_ENEMY_RAIDERS));
+    json.addInt("cathedral", game_get_global_var(GVAR_ENEMY_CATHEDRAL));
+    json.addInt("followers", game_get_global_var(GVAR_ENEMY_FOLLOWERS));
+    json.endObject();
+    
+    // Location discovery and visits
+    json.startObject("locations_known");
+    json.addInt("vault_13", game_get_global_var(GVAR_MARK_V13_1));
+    json.addInt("vault_15", game_get_global_var(GVAR_MARK_V15_1));
+    json.addInt("shady_sands", game_get_global_var(GVAR_MARK_SHADY_1));
+    json.addInt("junktown", game_get_global_var(GVAR_MARK_JUNK_1));
+    json.addInt("raiders", game_get_global_var(GVAR_MARK_RAIDERS_1));
+    json.addInt("necropolis", game_get_global_var(GVAR_MARK_NECROP_1));
+    json.addInt("hub", game_get_global_var(GVAR_MARK_HUB_1));
+    json.addInt("brotherhood", game_get_global_var(GVAR_MARK_BROTHER_1));
+    json.addInt("military_base", game_get_global_var(GVAR_MARK_BASE_1));
+    json.addInt("glow", game_get_global_var(GVAR_MARK_GLOW_1));
+    json.addInt("boneyard", game_get_global_var(GVAR_MARK_LA_1));
+    json.addInt("cathedral", game_get_global_var(GVAR_MARK_CHILD_1));
+    json.addInt("necropolis_visited", game_get_global_var(GVAR_NECROPOLIS_VISITED));
+    json.addInt("necropolis_known", game_get_global_var(GVAR_NECROPOLIS_KNOWN));
+    json.endObject();
+    
+    // Current player location (from worldmap)
+    json.addInt("player_location_id", game_get_global_var(GVAR_PLAYER_LOCATION));
     
     // Streaming stats
     json.addInt("total_damage_dealt", gTotalDamageDealt);

@@ -141,6 +141,16 @@ The game writes extensive state information every frame:
   "sequence": 8,
   "carry_weight": 175,
   "melee_damage": 2,
+  "healing_rate": 1,
+  "critical_chance": 5,
+  "damage_resistance": 0,
+  "radiation_resistance": 10,
+  "poison_resistance": 15,
+  "karma": 25,
+  "reputation": 50,
+  "age": 25,
+  "gender": 0,
+  "character_name": "Jack Morrison",
   "in_combat": false,
   "strength": 5,
   "perception": 6,
@@ -173,6 +183,10 @@ The game writes extensive state information every frame:
     {"name": "Bonus Move", "level": 1},
     {"name": "More Criticals", "level": 1}
   ],
+  "traits": [
+    {"name": "Gifted", "description": "+1 to all SPECIAL, -10% to all skills"},
+    {"name": "Fast Shot", "description": "You can't use targeted shots, but gain +1 AP"}
+  ],
   "map_name": "V13Ent",
   "nearby_objects": [
     {
@@ -197,6 +211,75 @@ The game writes extensive state information every frame:
       "name": "Stimpak"
     }
   ],
+  "equipped": {
+    "right_hand": {
+      "pid": 7,
+      "name": "Spear"
+    },
+    "armor": {
+      "pid": 74,
+      "name": "Leather Jacket"
+    }
+  },
+  "quests": {
+    "find_water_chip": 1,
+    "destroy_vats": 0,
+    "destroy_master": 0,
+    "days_to_vault13_discovery": 500,
+    "vault_water_days": 150,
+    "rescue_tandi": 2,
+    "tandi_status": 1,
+    "kill_radscorpions": 1,
+    "kill_deathclaw": 0,
+    "capture_gizmo": 0,
+    "kill_killian": 0,
+    "missing_caravan": 0,
+    "steal_necklace": 0,
+    "become_an_initiate": 0,
+    "find_lost_initiate": 0,
+    "kill_merchant": 0,
+    "kill_jain": 0,
+    "kill_super_mutants": 0,
+    "fix_necropolis_pump": 0,
+    "necropolis_water_chip_taken": 0,
+    "gang_war": 0,
+    "destroy_followers": 0,
+    "fix_farm": 0,
+    "save_sinthia": 0,
+    "cure_jarvis": 0,
+    "make_antidote": 0
+  },
+  "town_reputation": {
+    "vault_13": 0,
+    "shady_sands": 0,
+    "junktown": 0,
+    "hub": 0,
+    "necropolis": 0,
+    "brotherhood": 0,
+    "adytum": 0,
+    "rippers": 0,
+    "blades": 0,
+    "raiders": 1,
+    "cathedral": 0,
+    "followers": 0
+  },
+  "locations_known": {
+    "vault_13": 1,
+    "vault_15": 1,
+    "shady_sands": 1,
+    "junktown": 0,
+    "raiders": 1,
+    "necropolis": 0,
+    "hub": 0,
+    "brotherhood": 0,
+    "military_base": 0,
+    "glow": 0,
+    "boneyard": 0,
+    "cathedral": 0,
+    "necropolis_visited": 0,
+    "necropolis_known": 0
+  },
+  "player_location_id": 0,
   "total_damage_dealt": 145,
   "total_kills": 3,
   "session_time_seconds": 1234,
@@ -222,6 +305,57 @@ The game writes extensive state information every frame:
   ]
 }
 ```
+
+**New Fields Added (v2.1.0)**
+
+**Derived Stats:**
+- `healing_rate` - HP restored per rest/sleep
+- `critical_chance` - Base critical hit chance percentage
+- `damage_resistance` - General damage reduction
+- `radiation_resistance` - Radiation damage reduction
+- `poison_resistance` - Poison damage reduction
+
+**Character Identity:**
+- `karma` - Moral alignment value (-100 to +100, negative=evil, positive=good)
+- `reputation` - Overall fame/recognition (-100 to +100)
+- `age` - Character age in years
+- `gender` - 0=male, 1=female
+- `character_name` - Player character name (from character creation)
+
+**Traits:**
+- `traits[]` - Character traits selected at creation (up to 2)
+  - Each trait has `name` and `description`
+  - Traits provide permanent bonuses/penalties
+  - Examples: Gifted, Fast Shot, Bloody Mess, Kamikaze, etc.
+
+**Equipped Items:**
+- `equipped` - Object with currently equipped items
+  - `right_hand` - Weapon/item in right hand slot (pid, name)
+  - `left_hand` - Weapon/item in left hand slot (pid, name)
+  - `armor` - Currently worn armor (pid, name)
+
+**New Fields Added (v2.2.0)**
+
+**Quest Tracking:**
+- `quests` - Object containing key quest global variables
+  - Main story: `find_water_chip`, `destroy_vats`, `destroy_master`, `days_to_vault13_discovery`, `vault_water_days`
+  - Major side quests: `rescue_tandi`, `kill_radscorpions`, `kill_deathclaw`, `capture_gizmo`, `become_an_initiate`, `fix_necropolis_pump`, etc.
+  - Values indicate quest progress (0=not started, >0=in progress or completed, specific values vary by quest)
+  - 27 major quests tracked
+
+**Town Reputation:**
+- `town_reputation` - Object with enemy status for each faction
+  - Values: 0=neutral, 1=hostile
+  - Tracks: Vault 13, Shady Sands, Junktown, Hub, Necropolis, Brotherhood, Adytum, Rippers, Blades, Raiders, Cathedral, Followers
+
+**Location Discovery:**
+- `locations_known` - Object with map discovery status
+  - Values: 0=unknown, 1=known/discovered
+  - Tracks: All 12 major towns plus special locations
+  - Includes `necropolis_visited` and `necropolis_known` flags
+
+**Player Location:**
+- `player_location_id` - Current worldmap location ID (from GVAR_PLAYER_LOCATION)
 
 ### New: Real-Time AI Hints
 
