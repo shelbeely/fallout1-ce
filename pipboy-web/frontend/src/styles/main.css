@@ -111,6 +111,22 @@ body {
   max-width: 1000px;
   margin: 0 auto;
   padding: 0;
+  position: relative;
+}
+
+/* TV Glass Background Layer (from user's code) */
+.tv-glass-background {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    #85908c 0%,
+    #323431 100%
+  );
+  border-radius: 12px;
+  z-index: 0;
+  opacity: 0.15;
+  pointer-events: none;
 }
 
 .pipboy-screen {
@@ -128,6 +144,7 @@ body {
   grid-template-columns: 200px 1fr;
   gap: 20px;
   min-height: 600px;
+  z-index: 1;
 }
 
 /* Add rivets/screws effect */

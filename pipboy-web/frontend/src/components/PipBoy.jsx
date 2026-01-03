@@ -58,6 +58,8 @@ function PipBoy() {
 
   return (
     <div className="pipboy">
+      {/* TV Glass background layer */}
+      <div className="tv-glass-background"></div>
       <div className="pipboy-screen">
         <div className="pipboy-sidebar">
           <div className="pipboy-header">
