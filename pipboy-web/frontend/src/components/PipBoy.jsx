@@ -50,42 +50,46 @@ function PipBoy() {
   return (
     <div className="pipboy">
       <div className="pipboy-screen">
-        <div className="pipboy-header">
-          <img src="/images/logo.webp" alt="Pip-Boy 2000" className="pipboy-logo" />
-          <h1>PIP-BOY 2000</h1>
+        <div className="pipboy-sidebar">
+          <div className="pipboy-header">
+            <img src="/images/logo.webp" alt="Pip-Boy 2000" className="pipboy-logo" />
+            <h1>PIP-BOY 2000</h1>
+          </div>
           <div className="pipboy-tabs">
             <button 
               className={activeTab === 'status' ? 'active' : ''} 
               onClick={() => setActiveTab('status')}
             >
-              STAT
+              Status
             </button>
             <button 
               className={activeTab === 'stats' ? 'active' : ''} 
               onClick={() => setActiveTab('stats')}
             >
-              SPECIAL
+              Special
             </button>
             <button 
               className={activeTab === 'inventory' ? 'active' : ''} 
               onClick={() => setActiveTab('inventory')}
             >
-              INV
+              Inventory
             </button>
             <button 
               className={activeTab === 'data' ? 'active' : ''} 
               onClick={() => setActiveTab('data')}
             >
-              DATA
+              Data
             </button>
           </div>
         </div>
 
-        <div className="pipboy-content">
-          {activeTab === 'status' && <StatusTab gameData={gameData} />}
-          {activeTab === 'stats' && <StatsTab />}
-          {activeTab === 'inventory' && <InventoryTab />}
-          {activeTab === 'data' && <DataTab />}
+        <div className="pipboy-main">
+          <div className="pipboy-content">
+            {activeTab === 'status' && <StatusTab gameData={gameData} />}
+            {activeTab === 'stats' && <StatsTab />}
+            {activeTab === 'inventory' && <InventoryTab />}
+            {activeTab === 'data' && <DataTab />}
+          </div>
         </div>
       </div>
     </div>
