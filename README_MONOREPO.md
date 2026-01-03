@@ -145,23 +145,6 @@ python src/agent.py
 - **Separate from Viewer Website**: This is YOUR personal control interface
 
 See `pipboy-web/QUICKSTART.md` for setup instructions.
-- **Runs**: As separate process
-
-**Three Context Types**:
-1. **Game State**: HP, Location, Inventory, Quests, Time
-2. **Canon Context**: Where am I, Who is this NPC, What do they know
-3. **Strategy Context** (optional): Optimal paths, Warnings, Build advice
-
-### Website
-- **Location**: `website/`
-- **Purpose**: Collects data and displays dashboard
-- **Languages**: Python (backend), React (frontend)
-- **Runs**: As web server
-
-**Components**:
-- **Data Collector**: Reads JSON files, stores in SQLite
-- **API Server**: Serves data to frontend
-- **Frontend Dashboard**: Real-time character visualization
 
 ## Website Features
 
