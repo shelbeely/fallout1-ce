@@ -61,6 +61,9 @@ function PipBoy() {
       {/* TV Glass background layer */}
       <div className="tv-glass-background"></div>
       <div className="pipboy-screen">
+        {/* Metal grunge effect overlay for the main body */}
+        <div className="pipboy-metal-grunge"></div>
+        
         <div className="pipboy-sidebar">
           {/* Split-flap date display - moved to sidebar */}
           <div className="split-flap-display split-flap-sidebar">
