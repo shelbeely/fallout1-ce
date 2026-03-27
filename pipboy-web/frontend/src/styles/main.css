@@ -5,6 +5,69 @@
   box-sizing: border-box;
 }
 
+/* ===== Pip-Boy Metal Grunge Effect Variables ===== */
+:root {
+  --metal-grain-opacity: 0.15;
+  --metal-noise-opacity: 0.25;
+  --metal-noise-blend: multiply;
+  --metal-grain-blend: overlay;
+  --metal-grain-angle: 135deg;
+  --metal-scratch-spacing: 1px;
+}
+
+/* ===== Metal Grunge Utility Class ===== */
+.metal-grunge {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Brushed metal grain + micro scratches using ::before */
+.metal-grunge::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background: 
+    repeating-linear-gradient(
+      var(--metal-grain-angle),
+      rgba(255, 255, 255, 0) 0px,
+      rgba(255, 255, 255, 0.05) 0.5px,
+      rgba(255, 255, 255, 0) 1px,
+      rgba(0, 0, 0, 0.03) 1.5px,
+      rgba(0, 0, 0, 0) 2px
+    ),
+    repeating-linear-gradient(
+      calc(var(--metal-grain-angle) + 90deg),
+      rgba(255, 255, 255, 0) 0px,
+      rgba(255, 255, 255, 0.02) var(--metal-scratch-spacing),
+      rgba(255, 255, 255, 0) calc(var(--metal-scratch-spacing) * 2)
+    );
+  mix-blend-mode: var(--metal-grain-blend);
+  opacity: var(--metal-grain-opacity);
+  border-radius: inherit;
+}
+
+/* SVG noise overlay using ::after */
+.metal-grunge::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  background: white;
+  filter: url(#pipboyMetalNoise);
+  mix-blend-mode: var(--metal-noise-blend);
+  opacity: var(--metal-noise-opacity);
+  border-radius: inherit;
+}
+
+/* Ensure content stays above the grunge layers */
+.metal-grunge > * {
+  position: relative;
+  z-index: 3;
+}
+
 body {
   font-family: 'Courier New', monospace;
   background-color: #1a1410;
@@ -145,6 +208,58 @@ body {
   gap: 20px;
   min-height: 600px;
   z-index: 1;
+  overflow: hidden;
+}
+
+/* Metal grunge overlay for the pipboy main body - APPLIED TO TAN BORDER */
+.pipboy-metal-grunge {
+  position: absolute;
+  inset: -8px;
+  pointer-events: none;
+  z-index: 50;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/* Brushed metal grain + micro scratches */
+.pipboy-metal-grunge::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background: 
+    repeating-linear-gradient(
+      var(--metal-grain-angle, 135deg),
+      rgba(255, 255, 255, 0) 0px,
+      rgba(255, 255, 255, 0.1) 0.5px,
+      rgba(255, 255, 255, 0) 1px,
+      rgba(0, 0, 0, 0.05) 1.5px,
+      rgba(0, 0, 0, 0) 2px
+    ),
+    repeating-linear-gradient(
+      calc(var(--metal-grain-angle, 135deg) + 90deg),
+      rgba(255, 255, 255, 0) 0px,
+      rgba(255, 255, 255, 0.04) var(--metal-scratch-spacing, 1px),
+      rgba(255, 255, 255, 0) calc(var(--metal-scratch-spacing, 1px) * 2)
+    );
+  mix-blend-mode: var(--metal-grain-blend, overlay);
+  opacity: var(--metal-grain-opacity, 0.3);
+  border-radius: inherit;
+}
+
+/* SVG noise overlay for dirt/oxidation */
+.pipboy-metal-grunge::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  background: white;
+  filter: url(#pipboyMetalNoise);
+  mix-blend-mode: var(--metal-noise-blend, multiply);
+  opacity: var(--metal-noise-opacity, 0.35);
+  border-radius: inherit;
 }
 
 /* Add rivets/screws effect */
@@ -158,6 +273,7 @@ body {
   border-radius: 50%;
   border: 2px solid #3a2818;
   box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.8);
+  z-index: 100;
 }
 
 .pipboy-screen::before {
@@ -168,7 +284,6 @@ body {
 .pipboy-screen::after {
   top: 15px;
   right: 15px;
-}
 }
 
 /* Pip-Boy Sidebar Navigation */
@@ -183,6 +298,54 @@ body {
   box-shadow: 
     inset 0 2px 4px rgba(0, 0, 0, 0.5),
     0 2px 6px rgba(0, 0, 0, 0.4);
+  position: relative;
+  z-index: 10;
+  overflow: hidden;
+}
+
+/* Apply metal grunge to sidebar using inherited utility styles */
+.pipboy-sidebar::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  pointer-events: none;
+  z-index: 1;
+  background: 
+    repeating-linear-gradient(
+      var(--metal-grain-angle, 135deg),
+      rgba(255, 255, 255, 0) 0px,
+      rgba(255, 255, 255, 0.08) 0.5px,
+      rgba(255, 255, 255, 0) 1px,
+      rgba(0, 0, 0, 0.04) 1.5px,
+      rgba(0, 0, 0, 0) 2px
+    ),
+    repeating-linear-gradient(
+      calc(var(--metal-grain-angle, 135deg) + 90deg),
+      rgba(255, 255, 255, 0) 0px,
+      rgba(255, 255, 255, 0.03) var(--metal-scratch-spacing, 1px),
+      rgba(255, 255, 255, 0) calc(var(--metal-scratch-spacing, 1px) * 2)
+    );
+  mix-blend-mode: var(--metal-grain-blend, overlay);
+  opacity: var(--metal-grain-opacity, 0.25);
+  border-radius: 8px;
+}
+
+.pipboy-sidebar::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  pointer-events: none;
+  z-index: 2;
+  background: white;
+  filter: url(#pipboyMetalNoise);
+  mix-blend-mode: var(--metal-noise-blend, multiply);
+  opacity: var(--metal-noise-opacity, 0.3);
+  border-radius: 8px;
+}
+
+.pipboy-sidebar > * {
+  position: relative;
+  z-index: 3;
 }
 
 .pipboy-header {
@@ -336,6 +499,52 @@ body {
     0 2px 6px rgba(0, 0, 0, 0.5);
   flex-wrap: nowrap;
   overflow: hidden;
+  position: relative;
+}
+
+/* Apply metal grunge to split-flap display using inherited utility styles */
+.split-flap-display::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  pointer-events: none;
+  z-index: 1;
+  background: 
+    repeating-linear-gradient(
+      var(--metal-grain-angle, 135deg),
+      rgba(255, 255, 255, 0) 0px,
+      rgba(255, 255, 255, 0.06) 0.5px,
+      rgba(255, 255, 255, 0) 1px,
+      rgba(0, 0, 0, 0.03) 1.5px,
+      rgba(0, 0, 0, 0) 2px
+    ),
+    repeating-linear-gradient(
+      calc(var(--metal-grain-angle, 135deg) + 90deg),
+      rgba(255, 255, 255, 0) 0px,
+      rgba(255, 255, 255, 0.02) var(--metal-scratch-spacing, 1px),
+      rgba(255, 255, 255, 0) calc(var(--metal-scratch-spacing, 1px) * 2)
+    );
+  mix-blend-mode: var(--metal-grain-blend, overlay);
+  opacity: var(--metal-grain-opacity, 0.2);
+  border-radius: 6px;
+}
+
+.split-flap-display::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  pointer-events: none;
+  z-index: 2;
+  background: white;
+  filter: url(#pipboyMetalNoise);
+  mix-blend-mode: var(--metal-noise-blend, multiply);
+  opacity: var(--metal-noise-opacity, 0.25);
+  border-radius: 6px;
+}
+
+.split-flap-display > * {
+  position: relative;
+  z-index: 3;
 }
 
 /* Smaller version for sidebar */
@@ -479,6 +688,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0;
+  position: relative;
+  z-index: 10;
 }
 
 .pipboy-content {
@@ -702,7 +913,6 @@ body {
 .combat-inactive {
   color: #00ff88;
   text-shadow: 0 0 4px rgba(0, 255, 136, 0.4);
-}
 }
 
 .warning {
